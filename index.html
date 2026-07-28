@@ -301,8 +301,8 @@ function sessionCap(minutes){
 }
 
 function maxExercises(minutes, level){
-  let n = minutes<=45?5 : minutes<=60?6 : minutes<=75?7 : 8;
-  if(level==="beg") n = Math.min(n, 6);
+  let n = minutes<=45?4 : minutes<=60?5 : minutes<=75?6 : 7;
+  if(level==="beg") n = Math.min(n, 5);
   return n;
 }
 
@@ -403,8 +403,13 @@ function generateProgram(input){
 
     for(const m of dayMuscles){
       if(want[m] < 2) continue;
+      if(items.length >= maxEx) break;
       const chosen = pickExercises(m, want[m], eqSet, usedPat, input.goal, di);
-      for(const c of chosen){ c.sets = clamp(c.sets, 2, 5); items.push(c); }
+      for(const c of chosen){
+        if(items.length >= maxEx) break;
+        c.sets = clamp(c.sets, 2, 5);
+        items.push(c);
+      }
     }
     return {key:d.name, name:d.name, exercises:items};
   });
@@ -814,6 +819,14 @@ function setsForWeek(base, w){
   return base;
 }
 
+function exercisesForWeek(list, w){
+  var pairs = list.map(function(x,i){ return {x:x, i:i}; });
+  var frac = (w<=2) ? 0.6 : (w===7 ? 0.6 : 1);
+  if(frac>=1) return pairs;
+  var n = Math.max(4, Math.round(list.length*frac));
+  return pairs.slice(0, n);
+}
+
 function logKey(di, xi, si){ return S.week+"|"+di+"|"+xi+"|"+si; }
 
 function renderApp(){
@@ -867,18 +880,24 @@ function renderTrain(main, prog){
   main.appendChild(nav);
 
   var day = prog.days[S.dayIdx];
+  var plan = exercisesForWeek(day.exercises, S.week);
   var totalSets=0, doneSets=0;
-  day.exercises.forEach(function(x,xi){
-    var n = setsForWeek(x.sets, S.week);
+  plan.forEach(function(p){
+    var n = setsForWeek(p.x.sets, S.week);
     totalSets += n;
-    for(var si=0; si<n; si++){ if(S.log[logKey(S.dayIdx,xi,si)] && S.log[logKey(S.dayIdx,xi,si)].done) doneSets++; }
+    for(var si=0; si<n; si++){ if(S.log[logKey(S.dayIdx,p.i,si)] && S.log[logKey(S.dayIdx,p.i,si)].done) doneSets++; }
   });
   var bar = el("div","progbar","<span style=\"width:"+(totalSets?Math.round(doneSets/totalSets*100):0)+"%\"></span>");
   var pw = el("div","progwrap"); pw.appendChild(bar);
   pw.appendChild(el("span","progtxt", doneSets+"/"+totalSets+" подх."));
   main.appendChild(pw);
 
-  day.exercises.forEach(function(x, xi){
+  if(plan.length < day.exercises.length){
+    main.appendChild(el("div","warn", (S.week===7?"Делоад":"Вкатывание")+": сокращённый объём — "+plan.length+" из "+day.exercises.length+" упражнений. С 3-й недели программа раскрывается полностью."));
+  }
+
+  plan.forEach(function(pair){
+    var x = pair.x, xi = pair.i;
     var card = el("div","card");
     card.appendChild(el("h3",null, esc(x.name)));
     var n = setsForWeek(x.sets, S.week);
