@@ -285,6 +285,7 @@ function weeklyVolume(input){
   MUSCLES.forEach(m=>{
     let base = BASE_VOL[m]*expMul;
     if(input.goal==="str") base *= 0.75;
+    if(input.goal==="cut") base *= 0.9;
     if(input.emphasis && input.emphasis.indexOf(m)>=0) base *= 1.4;
     if(input.exclude && input.exclude.indexOf(m)>=0) base = 0;
     if(!input.legs && GROUP.legs.indexOf(m)>=0) base = 0;
@@ -316,6 +317,11 @@ function repScheme(goal, ex, isMain){
     if(ex.t==="comp" && isMain) return {reps:"4–6", rir:"2"};
     if(ex.t==="comp") return {reps:"6–10", rir:"1–2"};
     return {reps:"10–15", rir:"0–1"};
+  }
+  if(goal==="cut"){
+    if(ex.t==="comp" && isMain) return {reps:"5–8", rir:"2"};
+    if(ex.t==="comp") return {reps:"6–10", rir:"2"};
+    return {reps:"12–20", rir:"0–1"};
   }
   if(ex.t==="comp") return {reps:"6–10", rir:"1–2"};
   return {reps:"10–15", rir:"0–1"};
@@ -425,6 +431,8 @@ function generateProgram(input){
     target:vol,
     progression: input.goal==="str"
       ? "Линейно-волновая: на главных базовых добавляй ~2.5 кг когда выбил все подходы в верхе диапазона при RIR 2. Аксессуары — двойная прогрессия."
+      : input.goal==="cut"
+      ? "На сушке цель — УДЕРЖАТЬ веса, а не расти. Держи прежние килограммы на базе; если вес на штанге падает 2 тренировки подряд — режь дефицит, а не подходы. Прибавка веса на изоляции — бонус, не требование."
       : "Двойная прогрессия: держи диапазон повторов, добавляй по повтору; выбил верх во всех подходах при RIR ≤1 → +вес (2.5 кг база / 1–2 кг изоляция). Делоад на 7–8 неделе.",
     notes: buildNotes(input, split, achieved, vol)
   };
@@ -438,7 +446,12 @@ function buildNotes(input, split, achieved, target){
   if(emph.length) notes.push("Акцент: "+emph.join(", ")+" (объём поднят).");
   notes.push(input.goal==="str"?"Цель — сила: мало повторов на базе, больше отдых (3–5 мин), техника в приоритете."
     : input.goal==="hybrid"?"Цель — сила+масса: тяжёлая база в 4–6 + гипертрофийная подсобка."
+    : input.goal==="cut"?"Цель — сушка: база остаётся тяжёлой (5–8 повторов) — это защищает мышцы в дефиците. Изоляция уходит в 12–20 повторов. Объём чуть снижен: в дефиците восстановление хуже."
     : "Цель — гипертрофия: 6–15 повторов, RIR 0–2, отдых 1.5–3 мин.");
+  if(input.goal==="cut"){
+    notes.push("Кардио: 2–3 сессии по 20–30 мин или 8–10 тыс. шагов в день. Не заменяй им дефицит в еде — кардио дополняет, а не отменяет.");
+    notes.push("Главный маркер, что сушка идёт правильно: вес падает, а веса на штанге стоят.");
+  }
   return notes;
 }
 
@@ -549,14 +562,15 @@ function energy(input){
   const tdee = b.value*act.mul;
   let target, rate, label;
   switch(input.goal){
-    case "cut":    target = tdee*0.80; rate="−0.5…−0.7 кг/нед"; label="Жиросжигание"; break;
+    case "cut":    target = tdee*0.80; rate="−0.5…−0.7 кг/нед"; label="Сушка"; break;
     case "bulk":   target = tdee*1.10; rate="+0.2…+0.35 кг/нед"; label="Набор массы"; break;
     case "recomp": target = tdee*1.00; rate="вес держится ровно"; label="Рекомпозиция"; break;
     default:       target = tdee;      rate="вес держится ровно"; label="Поддержание";
   }
   const floor = input.sex==="f" ? 1200 : 1500;
-  if(target < floor) target = floor;
-  return {bmr:r(b.value), formula:b.formula, tdee:r(tdee), target:r(target), rate, label, activity:act.ru};
+  let floored = false;
+  if(target < floor){ target = floor; floored = true; }
+  return {bmr:r(b.value), formula:b.formula, tdee:r(tdee), target:r(target), rate, label, activity:act.ru, floored, deficit:r(tdee-target)};
 }
 
 function macros(input, kcal){
@@ -667,9 +681,20 @@ function generateNutrition(input){
   const e = energy(input);
   const m = macros(input, e.target);
   const {foods, notes} = allowedFoods(input.restrictions);
+  const goalNotes = [];
+  if(input.goal==="cut"){
+    goalNotes.push("Белок поднят до "+m.pPerKg+" г/кг — в дефиците это главная защита мышц.");
+    goalNotes.push("Раз в 7–10 дней сделай рефид: +25–30% калорий углеводами (не жиром). Помогает гормонам, тренировкам и голове.");
+    goalNotes.push("Дефицит ~"+e.deficit+" ккал/день. Если вес не падает 2–3 недели подряд — режь ещё на 150–200 ккал, не больше.");
+    goalNotes.push("Овощи и объёмная еда — твой друг: они дают сытость почти без калорий.");
+    if(e.floored) goalNotes.push("⚠ Расчётный дефицит упирался в безопасный минимум калорий — цель поднята до "+e.target+" ккал.");
+  }
+  if(input.goal==="bulk"){
+    goalNotes.push("Если за 2–3 недели вес стоит — добавь 150–200 ккал углеводами. Растёшь быстрее 0.4 кг/нед — убавь: лишнее уйдёт в жир.");
+  }
   const day = buildMeals(input, m, foods, input.dayIndex||0);
   const sum = day.meals ? day.meals.reduce((a,x)=>({kcal:a.kcal+x.total.kcal,p:a.p+x.total.p,f:a.f+x.total.f,c:a.c+x.total.c,fib:a.fib+x.total.fib}),{kcal:0,p:0,f:0,c:0,fib:0}) : null;
-  return {energy:e, macros:m, restrictionNotes:notes, foodsAvailable:foods.length, day, actual:sum ? {kcal:r(sum.kcal),p:r(sum.p),f:r(sum.f),c:r(sum.c),fib:r(sum.fib)} : null};
+  return {energy:e, macros:m, restrictionNotes:notes, goalNotes:goalNotes, foodsAvailable:foods.length, day, actual:sum ? {kcal:r(sum.kcal),p:r(sum.p),f:r(sum.f),c:r(sum.c),fib:r(sum.fib)} : null};
 }
 
 return {generateProgram:generateProgram, generateNutrition:generateNutrition, MUSCLE_RU:MUSCLE_RU, FOODS:FOODS, RESTRICTIONS:RESTRICTIONS};
@@ -696,6 +721,7 @@ var Q = [
     {v:"beg",l:"Новичок",d:"меньше года"},{v:"int",l:"Средний",d:"1–4 года"},{v:"adv",l:"Опытный",d:"больше 4 лет"}]},
   {id:"goal", q:"Главная цель", type:"pick", opts:[
     {v:"hyp",l:"Набрать мышцы",d:"гипертрофия, 6–15 повторов"},
+    {v:"cut",l:"Сушка",d:"сжечь жир, сохранив мышцы и силу"},
     {v:"str",l:"Стать сильнее",d:"сила, 3–6 повторов"},
     {v:"hybrid",l:"Сила + масса",d:"тяжёлая база + подсобка"}]},
   {id:"days", q:"Сколько дней в неделю", type:"pick", opts:[
@@ -713,9 +739,9 @@ var Q = [
     {v:"sed",l:"Сидячая",d:"офис, мало хожу"},{v:"light",l:"Лёгкая",d:"немного хожу"},
     {v:"mod",l:"Средняя",d:"много хожу"},{v:"high",l:"Высокая",d:"физический труд"}]},
   {id:"nutgoal", q:"Цель по питанию", type:"pick", opts:[
+    {v:"cut",l:"Сушка",d:"−20% калорий, белок 2.2 г/кг"},
     {v:"recomp",l:"Рекомпозиция",d:"мышцы при том же весе"},
     {v:"bulk",l:"Набор массы",d:"+10% калорий"},
-    {v:"cut",l:"Жиросжигание",d:"−20% калорий"},
     {v:"maintain",l:"Поддержание",d:"без изменений"}]},
   {id:"meals", q:"Сколько приёмов пищи в день", type:"pick", opts:[
     {v:3,l:"3"},{v:4,l:"4"},{v:5,l:"5"},{v:6,l:"6"}]},
@@ -794,7 +820,12 @@ function renderWizard(){
 }
 
 function next(){
+  var justAnswered = Q[qi];
   qi++;
+  if(justAnswered && justAnswered.id==="goal" && draft.nutgoal==null){
+    if(draft.goal==="cut") draft.nutgoal="cut";
+    else if(draft.goal==="hyp") draft.nutgoal="recomp";
+  }
   if(qi>=Q.length){ finish(); return; }
   render();
 }
@@ -972,6 +1003,15 @@ function renderFood(main, nut){
   main.appendChild(tiles);
   main.appendChild(el("p","hint", esc(e.label)+" · "+esc(e.rate)+" · TDEE ≈ "+e.tdee+" ккал ("+esc(e.formula)+")"));
 
+  var p0=S.profile;
+  if(p0 && p0.goal==="cut" && p0.nutgoal==="bulk"){
+    main.appendChild(el("div","warn","⚠ Тренировки настроены на сушку, а питание — на набор массы. Это противоречие: выбери одно. Пересобрать программу можно во вкладке «Профиль»."));
+  }
+  if(nut.goalNotes && nut.goalNotes.length){
+    var g=el("div","warn");
+    nut.goalNotes.forEach(function(n){ g.appendChild(el("div",null, esc(n))); });
+    main.appendChild(g);
+  }
   if(nut.restrictionNotes && nut.restrictionNotes.length){
     var w=el("div","warn");
     nut.restrictionNotes.forEach(function(n){ w.appendChild(el("div",null,"⚠ "+esc(n))); });
@@ -1009,7 +1049,7 @@ function renderProfile(main){
     ["Стаж", {beg:"новичок",int:"средний",adv:"опытный"}[p.level]],
     ["Программа", prog.meta.split],
     ["Тренировок", p.days+"/нед по "+p.minutes+" мин"],
-    ["Цель", {hyp:"гипертрофия",str:"сила",hybrid:"сила+масса"}[p.goal]]
+    ["Цель", {hyp:"гипертрофия",str:"сила",hybrid:"сила+масса",cut:"сушка"}[p.goal]]
   ];
   var t=el("div","prows");
   rows.forEach(function(r){ t.appendChild(el("div","prow","<span>"+esc(r[0])+"</span><b>"+esc(r[1])+"</b>")); });
