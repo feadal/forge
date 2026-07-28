@@ -1,6 +1,7 @@
 (function(){
 "use strict";
 var KEY="forge_v1";
+var APP_VERSION=3;
 var S=null, mem=null;
 
 function load(){ try{var r=localStorage.getItem(KEY); if(r) return JSON.parse(r);}catch(e){} return null; }
@@ -68,7 +69,7 @@ var Q = [
 var draft = {};
 var qi = 0;
 
-function startWizard(){ draft = {}; qi = 0; S.step="wizard"; save(); render(); }
+function startWizard(){ draft = {}; qi = 0; S.step="wizard"; S.staleHidden=false; save(); render(); }
 
 function renderWizard(){
   var root = $("app"); root.innerHTML="";
@@ -150,6 +151,7 @@ function finish(){
   S.profile = p;
   S.program = FORGE.generateProgram({level:p.level,days:p.days,minutes:p.minutes,goal:p.goal,legs:p.legs,emphasis:p.emphasis,equipment:p.equipment,limits:p.limits});
   S.nutrition = FORGE.generateNutrition({sex:p.sex,age:p.age,height:p.height,weight:p.weight,activity:p.activity,goal:p.nutgoal,meals:p.meals,restrictions:p.restrictions});
+  S.version = APP_VERSION;
   S.step = (p.redflags && p.redflags.length) ? "redflag" : "app";
   S.tab="train"; S.dayIdx=0; S.log={}; S.week=1;
   save(); render();
@@ -197,6 +199,20 @@ function renderApp(){
   root.appendChild(tabs);
 
   var main = el("div","main");
+
+  if(S.program && S.version !== APP_VERSION && !S.staleHidden){
+    var sb = el("div","warn");
+    sb.appendChild(el("div",null,"Эта программа собрана прошлой версией приложения — в ней нет сушки, учёта травм и новой периодизации."));
+    var brow = el("div","row2");
+    var rb = el("button","accent-btn","Пересобрать");
+    rb.onclick = function(){ startWizard(); };
+    var hb = el("button","ghost-btn","Оставить как есть");
+    hb.onclick = function(){ S.staleHidden = true; save(); render(); };
+    brow.appendChild(rb); brow.appendChild(hb);
+    sb.appendChild(brow);
+    main.appendChild(sb);
+  }
+
   if(S.tab==="train") renderTrain(main, prog);
   else if(S.tab==="food") renderFood(main, nut);
   else renderProfile(main);
@@ -392,15 +408,16 @@ function renderProfile(main){
   if(prog.notes) prog.notes.forEach(function(t){ n.appendChild(el("p","hint","• "+esc(t))); });
   main.appendChild(n);
 
-  var again=el("button","ghost-btn","Пересобрать программу");
-  again.onclick=function(){ if(confirm("Заново пройти анкету? Логи тренировок сохранятся.")) startWizard(); };
+  var again=el("button","accent-btn","Пересобрать программу");
+  again.onclick=function(){ if(confirm("Заново пройти анкету? Логи тренировок и история сохранятся.")) startWizard(); };
   main.appendChild(again);
+  main.appendChild(el("p","hint","Пройдёшь анкету заново — программа и рацион соберутся с нуля. История тренировок останется."));
 
   var wipe=el("button","ghost-btn danger","Сбросить всё");
   wipe.onclick=function(){
     if(!confirm("Стереть профиль, программу и все логи?")) return;
     try{localStorage.removeItem(KEY);}catch(e){}
-    S={step:"intro",profile:null,program:null,nutrition:null,log:{},history:[],week:1,tab:"train",dayIdx:0};
+    S={step:"intro",profile:null,program:null,nutrition:null,log:{},history:[],week:1,tab:"train",dayIdx:0,version:APP_VERSION};
     mem=null; save(); render();
   };
   main.appendChild(wipe);
