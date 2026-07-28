@@ -1,0 +1,1068 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f1115">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="FORGE">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon-180.png">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<title>FORGE — конструктор тренировок</title>
+</head>
+<body>
+<style>
+:root{
+  --bg:#0f1115; --surface:#171a21; --elev:#1f242e; --line:#2a3140;
+  --text:#e7ebf2; --strong:#fdfdff; --muted:#96a0b2; --faint:#69748a;
+  --accent:#4fd1c5; --accent-2:#7ee8dd; --on-accent:#052421;
+  --success:#5fbe86; --caution:#e3674c;
+  --accent-tint:rgba(79,209,197,.13); --shadow:0 8px 24px -14px rgba(0,0,0,.7);
+  --radius:14px;
+}
+@media (prefers-color-scheme: light){
+  :root{
+    --bg:#eef0f4; --surface:#fff; --elev:#fff; --line:#dfe3ea;
+    --text:#1a1f27; --strong:#0c1016; --muted:#5a6472; --faint:#8b94a3;
+    --accent:#0e8f83; --accent-2:#0a6f66; --on-accent:#fff;
+    --accent-tint:rgba(14,143,131,.1); --shadow:0 8px 24px -18px rgba(16,20,28,.35);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f1115; --surface:#171a21; --elev:#1f242e; --line:#2a3140;
+  --text:#e7ebf2; --strong:#fdfdff; --muted:#96a0b2; --faint:#69748a;
+  --accent:#4fd1c5; --accent-2:#7ee8dd; --on-accent:#052421;
+  --accent-tint:rgba(79,209,197,.13);
+}
+:root[data-theme="light"]{
+  --bg:#eef0f4; --surface:#fff; --elev:#fff; --line:#dfe3ea;
+  --text:#1a1f27; --strong:#0c1016; --muted:#5a6472; --faint:#8b94a3;
+  --accent:#0e8f83; --accent-2:#0a6f66; --on-accent:#fff;
+  --accent-tint:rgba(14,143,131,.1);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);line-height:1.45;
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,"Segoe UI",Roboto,sans-serif;
+  -webkit-font-smoothing:antialiased}
+#app{max-width:560px;margin:0 auto;padding:16px 16px 48px}
+h1,h2,h3,h4{margin:0;color:var(--strong);letter-spacing:-.01em}
+button{font-family:inherit;cursor:pointer}
+input{font-family:ui-monospace,"SF Mono",Menlo,monospace}
+
+.intro{padding:32px 4px;text-align:center}
+.intro h1{font-size:2.6rem;font-weight:800;letter-spacing:-.03em;color:var(--accent)}
+.lead{color:var(--muted);font-size:1rem;margin:12px 0 26px;text-wrap:balance}
+.feats{display:flex;flex-direction:column;gap:10px;margin-bottom:26px;text-align:left}
+.feat{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:13px 15px;box-shadow:var(--shadow)}
+.feat b{display:block;color:var(--strong);font-size:.95rem;margin-bottom:3px}
+.feat span{color:var(--muted);font-size:.84rem}
+.fine{color:var(--faint);font-size:.76rem;margin-top:16px}
+
+.accent-btn{width:100%;border:none;background:var(--accent);color:var(--on-accent);
+  font-size:.95rem;font-weight:700;padding:15px;border-radius:12px;margin-top:14px}
+.accent-btn.big{padding:17px;font-size:1rem}
+.accent-btn:active{filter:brightness(.93)}
+.ghost-btn{width:100%;border:1px solid var(--line);background:var(--surface);color:var(--muted);
+  font-size:.86rem;font-weight:600;padding:13px;border-radius:12px;margin-top:10px}
+.ghost-btn.danger:active{border-color:var(--caution);color:var(--caution)}
+
+.wz-head{display:flex;align-items:center;gap:12px;margin:6px 0 22px}
+.wz-prog{flex:1;height:6px;background:var(--elev);border-radius:99px;overflow:hidden;box-shadow:inset 0 0 0 1px var(--line)}
+.wz-prog span{display:block;height:100%;background:var(--accent);border-radius:99px;transition:width .25s}
+.wz-count{font-size:.75rem;color:var(--faint);font-variant-numeric:tabular-nums}
+.wz-q{font-size:1.5rem;font-weight:700;margin-bottom:4px;text-wrap:balance}
+.wz-sub{color:var(--muted);font-size:.86rem;margin:0 0 14px}
+.wz-body{margin-top:18px;display:flex;flex-direction:column;gap:9px}
+.opt{text-align:left;background:var(--surface);border:1.5px solid var(--line);border-radius:12px;
+  padding:15px;color:var(--text);transition:border-color .15s,background .15s}
+.opt b{display:block;font-size:1rem;font-weight:600;color:var(--strong)}
+.opt i{display:block;font-style:normal;font-size:.8rem;color:var(--muted);margin-top:2px}
+.opt.on,.opt:active{border-color:var(--accent);background:var(--accent-tint)}
+.numwrap{display:flex;align-items:center;gap:10px;background:var(--surface);
+  border:1.5px solid var(--line);border-radius:12px;padding:6px 14px}
+.numin{flex:1;background:transparent;border:none;outline:none;color:var(--strong);
+  font-size:28px;font-weight:700;padding:10px 0;width:100%}
+.numunit{color:var(--muted);font-size:.9rem}
+.multi{display:flex;flex-wrap:wrap;gap:8px}
+.chip{background:var(--surface);border:1.5px solid var(--line);border-radius:99px;
+  padding:10px 15px;color:var(--text);font-size:.86rem;font-weight:500}
+.chip.on{border-color:var(--accent);background:var(--accent-tint);color:var(--accent)}
+
+.topbar{margin-bottom:12px}
+.brand{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:12px}
+.brand b{font-size:1.4rem;font-weight:800;color:var(--accent);letter-spacing:-.02em}
+.brand span{font-size:.74rem;color:var(--muted);text-align:right}
+.weekbar{display:flex;align-items:center;gap:10px}
+.stp{width:42px;height:42px;border-radius:11px;border:1px solid var(--line);background:var(--surface);color:var(--text);font-size:.9rem}
+.wkmid{flex:1;text-align:center}
+.wkmid b{display:block;font-size:.95rem;color:var(--strong)}
+.wkmid i{font-style:normal;font-size:.76rem;color:var(--accent)}
+
+.tabs{display:flex;gap:5px;margin:14px 0 16px;background:var(--elev);padding:5px;border-radius:12px;border:1px solid var(--line)}
+.tab{flex:1;padding:10px 4px;border:none;background:transparent;color:var(--muted);font-size:.85rem;font-weight:600;border-radius:9px}
+.tab.on{background:var(--surface);color:var(--strong);box-shadow:0 1px 3px rgba(0,0,0,.2)}
+
+.daynav{display:flex;gap:7px;overflow-x:auto;padding-bottom:4px;margin-bottom:12px}
+.dbtn{flex:0 0 auto;padding:9px 14px;border-radius:99px;border:1px solid var(--line);
+  background:var(--surface);color:var(--muted);font-size:.82rem;font-weight:600;white-space:nowrap}
+.dbtn.on{border-color:var(--accent);color:var(--accent);background:var(--accent-tint)}
+
+.progwrap{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.progbar{flex:1;height:8px;background:var(--elev);border-radius:99px;overflow:hidden;box-shadow:inset 0 0 0 1px var(--line)}
+.progbar span{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-2));transition:width .3s}
+.progtxt{font-size:.78rem;color:var(--muted);font-weight:600;font-variant-numeric:tabular-nums}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+  padding:13px 14px;margin-bottom:11px;box-shadow:var(--shadow)}
+.card h3{font-size:.98rem;font-weight:700;line-height:1.25;text-wrap:balance}
+.card h3 small{font-weight:500;color:var(--muted);font-size:.76rem;margin-left:5px}
+.cmeta{font-size:.78rem;color:var(--muted);margin-top:4px}
+.cmeta b{color:var(--accent);font-weight:700}
+.cue{font-size:.77rem;color:var(--muted);margin:8px 0 10px;padding-left:9px;border-left:2px solid var(--line)}
+.sets{display:flex;flex-direction:column;gap:7px}
+.srow{display:flex;align-items:center;gap:8px;padding:4px 5px;border-radius:10px}
+.srow.done{background:rgba(95,190,134,.15)}
+.snum{width:18px;text-align:center;font-size:.72rem;font-weight:700;color:var(--faint);font-family:ui-monospace,monospace}
+.fld{position:relative;flex:1;display:flex;align-items:center}
+.fld input{width:100%;height:44px;background:var(--elev);border:1px solid var(--line);border-radius:10px;
+  color:var(--text);font-size:16px;font-weight:600;text-align:center;padding:0 30px 0 6px;outline:none;
+  font-variant-numeric:tabular-nums}
+.fld input:focus{border-color:var(--accent)}
+.unit{position:absolute;right:8px;font-size:.66rem;color:var(--faint);pointer-events:none}
+.ck{width:44px;height:44px;border-radius:11px;border:1.5px solid var(--line);background:transparent;
+  color:transparent;font-size:1.05rem;font-weight:800}
+.srow.done .ck{background:var(--success);border-color:var(--success);color:#0b1a12}
+
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 4px;text-align:center;box-shadow:var(--shadow)}
+.tk{display:block;font-size:.63rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:4px}
+.tv{font-size:1.32rem;font-weight:700;color:var(--strong);font-variant-numeric:tabular-nums;font-family:ui-monospace,monospace}
+.tile.acc .tv{color:var(--accent)}
+.hint{font-size:.79rem;color:var(--muted);margin:2px 2px 14px;line-height:1.45}
+.warn{background:var(--accent-tint);border:1px solid var(--line);border-radius:12px;padding:11px 13px;
+  font-size:.8rem;color:var(--text);margin-bottom:12px;display:flex;flex-direction:column;gap:6px}
+
+.fitems{display:flex;flex-direction:column;gap:2px;margin-top:8px}
+.fitem{display:flex;justify-content:space-between;align-items:baseline;gap:10px;
+  padding:8px 0;border-bottom:1px solid var(--line);font-size:.86rem}
+.fitem:last-child{border-bottom:none}
+.fitem b{font-family:ui-monospace,monospace;color:var(--accent);font-weight:700;white-space:nowrap}
+
+.prows{display:flex;flex-direction:column;gap:2px;margin-top:8px}
+.prow{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:.85rem}
+.prow:last-child{border-bottom:none}
+.prow span{color:var(--muted)}
+.prow b{color:var(--strong);font-weight:600}
+.block{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:13px 14px;margin-top:12px}
+.bh{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px}
+.hrow{font-size:.82rem;color:var(--text);padding:7px 0;border-bottom:1px solid var(--line)}
+.hrow:last-child{border-bottom:none}
+
+#toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(18px);
+  background:var(--strong);color:var(--bg);font-size:.84rem;font-weight:600;padding:10px 16px;
+  border-radius:99px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:50}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+<div id="app"></div>
+<div id="toast"></div>
+<script>
+var FORGE=(function(){
+"use strict";
+
+const MUSCLES = ["chest","lats","upback","sdelt","rdelt","biceps","triceps","quads","hams","glutes","calves","traps","core"];
+
+const MUSCLE_RU = {
+  chest:"Грудь", lats:"Широчайшие", upback:"Верх спины", sdelt:"Средние дельты",
+  rdelt:"Задние дельты", biceps:"Бицепс", triceps:"Трицепс", quads:"Квадрицепс",
+  hams:"Бицепс бедра", glutes:"Ягодицы", calves:"Икры", traps:"Трапеции", core:"Кор"
+};
+
+const BASE_VOL = {
+  chest:14, lats:14, upback:10, sdelt:14, rdelt:8, biceps:10, triceps:10,
+  quads:14, hams:10, glutes:10, calves:10, traps:6, core:8
+};
+
+const GROUP = {
+  push: ["chest","sdelt","triceps"],
+  pull: ["lats","upback","rdelt","biceps","traps"],
+  legs: ["quads","hams","glutes","calves"],
+  core: ["core"]
+};
+const UPPER = [].concat(GROUP.push, GROUP.pull);
+const ALL = [].concat(UPPER, GROUP.legs, GROUP.core);
+
+const EX = [
+  {id:"inc_db_press", n:"Жим гантелей на наклонной 30°", m:"chest", sec:["fdelt","triceps"], eq:["db"], t:"comp", pat:"hpress", stretch:true, cue:"Локти ~45°, растяжение внизу"},
+  {id:"flat_bb_bench", n:"Жим штанги лёжа", m:"chest", sec:["fdelt","triceps"], eq:["bb"], t:"comp", pat:"hpress", cue:"Лопатки сведены, ноги в пол"},
+  {id:"flat_db_press", n:"Жим гантелей лёжа", m:"chest", sec:["fdelt","triceps"], eq:["db"], t:"comp", pat:"hpress", stretch:true, cue:"Глубокое растяжение"},
+  {id:"dip", n:"Отжимания на брусьях", m:"chest", sec:["triceps"], eq:["bw"], t:"comp", pat:"dip", stretch:true, cue:"Наклон корпуса вперёд на грудь"},
+  {id:"cable_fly", n:"Сведения в кроссовере снизу-вверх", m:"chest", eq:["cable"], t:"iso", pat:"fly", stretch:true, cue:"К верху груди, сжатие 1 сек"},
+  {id:"pecdeck", n:"Бабочка (пек-дек)", m:"chest", eq:["machine"], t:"iso", pat:"fly", cue:"Полное сведение"},
+
+  {id:"pullup", n:"Подтягивания", m:"lats", sec:["biceps","upback"], eq:["bw"], t:"comp", pat:"vpull", stretch:true, cue:"Полная амплитуда, свод лопаток"},
+  {id:"lat_pulldown", n:"Тяга верхнего блока", m:"lats", sec:["biceps"], eq:["cable"], t:"comp", pat:"vpull", stretch:true, cue:"Тяни локтями вниз"},
+  {id:"pullover", n:"Пуловер на блоке", m:"lats", eq:["cable"], t:"iso", pat:"pullover", stretch:true, cue:"Растяжение широчайших вверху"},
+
+  {id:"barbell_row", n:"Тяга штанги в наклоне", m:"upback", sec:["lats","biceps"], eq:["bb"], t:"comp", pat:"hpull", cue:"Спина ровная, тяни к поясу"},
+  {id:"chest_row", n:"Тяга гантели в упоре (грудь в лавку)", m:"upback", sec:["lats"], eq:["db"], t:"comp", pat:"hpull", cue:"Корпус зафиксирован"},
+  {id:"seated_row", n:"Горизонтальная тяга блока", m:"upback", sec:["lats","biceps"], eq:["cable"], t:"comp", pat:"hpull", cue:"Сводим лопатки"},
+
+  {id:"facepull", n:"Тяга к лицу (face pull)", m:"rdelt", sec:["upback","traps"], eq:["cable"], t:"iso", pat:"rear", cue:"Разворот кистей наружу"},
+  {id:"reverse_pecdeck", n:"Обратная бабочка", m:"rdelt", eq:["machine"], t:"iso", pat:"rear", cue:"Ведём локтями"},
+  {id:"cable_rear_fly", n:"Разведение на задние дельты в кроссовере", m:"rdelt", eq:["cable"], t:"iso", pat:"rear", cue:"Без раскачки"},
+
+  {id:"db_lat_raise", n:"Махи гантелями в стороны", m:"sdelt", eq:["db"], t:"iso", pat:"lateral", cue:"Мизинец чуть выше, контроль вниз"},
+  {id:"cable_lat_raise", n:"Махи в стороны на блоке", m:"sdelt", eq:["cable"], t:"iso", pat:"lateral", stretch:true, cue:"Постоянное натяжение"},
+
+  {id:"ohp", n:"Жим штанги стоя", m:"sdelt", sec:["triceps"], eq:["bb"], t:"comp", pat:"vpress", cue:"Кор в напряжении, без прогиба"},
+  {id:"db_shoulder_press", n:"Жим гантелей сидя", m:"sdelt", sec:["triceps"], eq:["db"], t:"comp", pat:"vpress", cue:"Не заваливай локти назад"},
+
+  {id:"incline_db_curl", n:"Сгибания на бицепс на наклонной", m:"biceps", eq:["db"], t:"iso", pat:"curl", stretch:true, cue:"Растяжка в нижней точке"},
+  {id:"preacher_curl", n:"Сгибания на скамье Скотта", m:"biceps", eq:["machine","db"], t:"iso", pat:"curl_short", cue:"Не срывай с нижней точки"},
+  {id:"cable_curl", n:"Сгибания на блоке", m:"biceps", eq:["cable"], t:"iso", pat:"curl_short", cue:"Постоянное натяжение"},
+  {id:"bb_curl", n:"Подъём штанги на бицепс", m:"biceps", eq:["bb"], t:"iso", pat:"curl", cue:"Без читинга корпусом"},
+
+  {id:"overhead_ext", n:"Разгибание на трицепс из-за головы", m:"triceps", eq:["cable","db"], t:"iso", pat:"tri_stretch", stretch:true, cue:"Полное растяжение, локти у головы"},
+  {id:"pushdown", n:"Разгибание на трицепс вниз (канат)", m:"triceps", eq:["cable"], t:"iso", pat:"tri_short", cue:"Локти на месте, разводи внизу"},
+  {id:"skullcrusher", n:"Французский жим", m:"triceps", eq:["bb","db"], t:"iso", pat:"tri_stretch", cue:"Опускай ко лбу/за голову"},
+  {id:"close_grip_bench", n:"Жим узким хватом", m:"triceps", sec:["chest"], eq:["bb"], t:"comp", pat:"hpress", cue:"Локти вдоль корпуса"},
+
+  {id:"back_squat", n:"Присед со штангой", m:"quads", sec:["glutes","hams"], eq:["bb"], t:"comp", pat:"squat", stretch:true, cue:"Глубина ниже параллели, спина ровная"},
+  {id:"leg_press", n:"Жим ногами", m:"quads", sec:["glutes"], eq:["machine"], t:"comp", pat:"squat", cue:"Не отрывай таз внизу"},
+  {id:"hack_squat", n:"Гакк-присед", m:"quads", sec:["glutes"], eq:["machine"], t:"comp", pat:"squat", stretch:true, cue:"Колени по носкам"},
+  {id:"bulgarian_split", n:"Болгарские выпады", m:"quads", sec:["glutes"], eq:["db"], t:"comp", pat:"lunge", stretch:true, cue:"Вес на переднюю ногу"},
+  {id:"leg_extension", n:"Разгибание ног", m:"quads", eq:["machine"], t:"iso", pat:"knee_ext", cue:"Пауза в верхней точке"},
+
+  {id:"rdl", n:"Румынская тяга", m:"hams", sec:["glutes"], eq:["bb"], t:"comp", pat:"hinge", stretch:true, cue:"Таз назад, спина ровная"},
+  {id:"leg_curl", n:"Сгибание ног лёжа", m:"hams", eq:["machine"], t:"iso", pat:"knee_flex", cue:"Контроль на негативе"},
+  {id:"seated_leg_curl", n:"Сгибание ног сидя", m:"hams", eq:["machine"], t:"iso", pat:"knee_flex", stretch:true, cue:"Растяжение в верхней точке"},
+
+  {id:"hip_thrust", n:"Ягодичный мост со штангой", m:"glutes", sec:["hams"], eq:["bb"], t:"comp", pat:"hinge", cue:"Сжатие ягодиц вверху"},
+
+  {id:"standing_calf", n:"Подъёмы на носки стоя", m:"calves", eq:["machine"], t:"iso", pat:"calf", stretch:true, cue:"Полное растяжение внизу"},
+  {id:"seated_calf", n:"Подъёмы на носки сидя", m:"calves", eq:["machine"], t:"iso", pat:"calf_bent", cue:"Пауза внизу и вверху"},
+
+  {id:"shrug", n:"Шраги с гантелями", m:"traps", eq:["db"], t:"iso", pat:"shrug", cue:"Плечи строго вверх"},
+
+  {id:"hanging_leg_raise", n:"Подъём ног в висе", m:"core", eq:["bw"], t:"iso", pat:"core_flex", cue:"Без раскачки, скручивай таз"},
+  {id:"cable_crunch", n:"Скручивания на блоке", m:"core", eq:["cable"], t:"iso", pat:"core_flex", cue:"Скругляй спину"},
+  {id:"plank", n:"Планка", m:"core", eq:["bw"], t:"iso", pat:"core_brace", cue:"Таз не проваливай"}
+];
+
+function round(x){ return Math.round(x); }
+function clamp(x,a,b){ return Math.max(a, Math.min(b,x)); }
+
+function chooseSplit(days, legs, goal){
+  const U="upper", L="lower", F="full", P="push", Pu="pull", Lg="legs";
+  const tpl = { upper: UPPER, lower: GROUP.legs, full: ALL, push: GROUP.push, pull: GROUP.pull.concat("core"), legs: GROUP.legs };
+  let seq;
+  if(!legs){
+    const u=(k)=>({name:"Верх "+k, muscles:UPPER.concat("core")});
+    if(days<=2) seq=[u("A"),u("B")];
+    else if(days===3) seq=[u("A"),u("B"),u("C")];
+    else if(days===4) seq=[u("A"),u("B"),u("A2"),u("B2")];
+    else if(days===5) seq=[u("A"),u("B"),u("A2"),u("B2"),u("C")];
+    else seq=[u("A"),u("B"),u("A2"),u("B2"),u("A3"),u("B3")];
+    return {name:"Только верх ×"+days, days:seq};
+  }
+  const mk=(key,label)=>({name:label, muscles:tpl[key].slice()});
+  if(days<=2){ seq=[mk("full","Всё тело A"),mk("full","Всё тело B")]; return splitName("Фулбади ×2",seq); }
+  if(days===3){ seq=[mk("full","Всё тело A"),mk("full","Всё тело B"),mk("full","Всё тело C")]; return splitName("Фулбади ×3",seq); }
+  if(days===4){ seq=[mk("upper","Верх A"),mk("lower","Низ A"),mk("upper","Верх B"),mk("lower","Низ B")]; return splitName("Верх/Низ ×2",seq); }
+  if(days===5){ seq=[mk("push","Жим (пуш)"),mk("pull","Тяга (пул)"),mk("legs","Ноги"),mk("upper","Верх"),mk("lower","Низ")]; return splitName("Пуш/Пул/Ноги + Верх/Низ",seq); }
+  seq=[mk("push","Жим A"),mk("pull","Тяга A"),mk("legs","Ноги A"),mk("push","Жим B"),mk("pull","Тяга B"),mk("legs","Ноги B")];
+  return splitName("Пуш/Пул/Ноги ×2",seq);
+}
+function splitName(name,days){ return {name, days}; }
+
+function weeklyVolume(input){
+  const expMul = {beg:0.7, int:1.0, adv:1.15}[input.level] || 1.0;
+  const vol = {};
+  MUSCLES.forEach(m=>{
+    let base = BASE_VOL[m]*expMul;
+    if(input.goal==="str") base *= 0.75;
+    if(input.emphasis && input.emphasis.indexOf(m)>=0) base *= 1.4;
+    if(input.exclude && input.exclude.indexOf(m)>=0) base = 0;
+    if(!input.legs && GROUP.legs.indexOf(m)>=0) base = 0;
+    vol[m] = base>0 ? clamp(round(base),4,26) : 0;
+  });
+  return vol;
+}
+
+function sessionCap(minutes){
+  if(minutes<=45) return 14;
+  if(minutes<=60) return 18;
+  if(minutes<=75) return 22;
+  return 26;
+}
+
+function maxExercises(minutes, level){
+  let n = minutes<=45?5 : minutes<=60?6 : minutes<=75?7 : 8;
+  if(level==="beg") n = Math.min(n, 6);
+  return n;
+}
+
+function repScheme(goal, ex, isMain){
+  if(goal==="str"){
+    if(ex.t==="comp" && isMain) return {reps:"3–5", rir:"2"};
+    if(ex.t==="comp") return {reps:"5–8", rir:"2"};
+    return {reps:"6–10", rir:"1–2"};
+  }
+  if(goal==="hybrid"){
+    if(ex.t==="comp" && isMain) return {reps:"4–6", rir:"2"};
+    if(ex.t==="comp") return {reps:"6–10", rir:"1–2"};
+    return {reps:"10–15", rir:"0–1"};
+  }
+  if(ex.t==="comp") return {reps:"6–10", rir:"1–2"};
+  return {reps:"10–15", rir:"0–1"};
+}
+
+function pickExercises(muscle, nsets, eqSet, usedPat, goal, rot){
+  let pool = EX.filter(e=> e.m===muscle && e.eq.some(x=>eqSet.has(x)));
+  const score = (e)=> (e.t==="comp"?2:0) + (e.stretch?1:0);
+  pool.sort((a,b)=> score(b)-score(a));
+  if(rot && pool.length>1){
+    const k = rot % pool.length;
+    pool = pool.slice(k).concat(pool.slice(0,k));
+  }
+  const out=[];
+  let need = nsets;
+  const nEx = need<=5?1 : need<=9?2 : 3;
+  const perEx = [];
+  if(nEx===1) perEx.push(need);
+  else if(nEx===2){ perEx.push(Math.ceil(need/2)); perEx.push(need-perEx[0]); }
+  else { const a=Math.ceil(need/3); perEx.push(a,a,need-2*a); }
+  let i=0;
+  for(const e of pool){
+    if(out.length>=nEx) break;
+    if(usedPat.has(e.pat)) continue;
+    usedPat.add(e.pat);
+    const isMain = out.length===0 && e.t==="comp";
+    const rs = repScheme(goal, e, isMain);
+    out.push({id:e.id, name:e.n, muscle, sets:perEx[i]||need, reps:rs.reps, rir:rs.rir, cue:e.cue, stretch:!!e.stretch, type:e.t});
+    i++;
+  }
+  if(out.length===0 && pool.length){
+    const e=pool[0]; const rs=repScheme(goal,e,e.t==="comp");
+    out.push({id:e.id,name:e.n,muscle,sets:need,reps:rs.reps,rir:rs.rir,cue:e.cue,stretch:!!e.stretch,type:e.t});
+  }
+  return out;
+}
+
+function generateProgram(input){
+  input = Object.assign({level:"int", days:4, minutes:75, goal:"hyp", legs:true, emphasis:[], exclude:[]}, input||{});
+  input.days = clamp(input.days,2,6);
+  const split = chooseSplit(input.days, input.legs, input.goal);
+  const vol = weeklyVolume(input);
+
+  const dayCount = {};
+  MUSCLES.forEach(m=> dayCount[m]=0);
+  split.days.forEach(d=> d.muscles.forEach(m=>{ if(vol[m]>0) dayCount[m]++; }));
+
+  const cap = sessionCap(input.minutes);
+  const priority = ["quads","chest","lats","upback","hams","glutes","sdelt","triceps","biceps","rdelt","calves","traps","core"];
+  const eqSet = new Set(input.equipment && input.equipment.length ? input.equipment : ["bb","db","cable","machine","bw"]);
+
+  const days = split.days.map((d, di)=>{
+    const usedPat = new Set();
+    const items = [];
+    let dayMuscles = priority.filter(m=> d.muscles.indexOf(m)>=0 && vol[m]>0 && dayCount[m]>0);
+
+    const maxEx = maxExercises(input.minutes, input.level);
+    if(dayMuscles.length > maxEx){
+      const keep = Math.min(3, maxEx);
+      const head = dayMuscles.slice(0, keep);
+      const tail = dayMuscles.slice(keep);
+      const step = Math.max(1, maxEx - keep);
+      const k = (di * step) % tail.length;
+      const rotated = tail.slice(k).concat(tail.slice(0,k));
+      const picked = head.concat(rotated).slice(0, maxEx);
+      dayMuscles = priority.filter(m=> picked.indexOf(m)>=0);
+    }
+
+    const want = {};
+    dayMuscles.forEach(m=>{ want[m] = Math.max(2, Math.round(vol[m]/dayCount[m])); });
+    let sum = dayMuscles.reduce((a,m)=>a+want[m],0);
+
+    if(sum > cap){
+      const scale = cap/sum;
+      dayMuscles.forEach(m=>{ want[m] = Math.max(2, Math.round(want[m]*scale)); });
+      sum = dayMuscles.reduce((a,m)=>a+want[m],0);
+      let guard = 0;
+      while(sum > cap && guard++ < 100){
+        let big = null;
+        dayMuscles.forEach(m=>{ if(want[m] > 2 && (!big || want[m] > want[big])) big = m; });
+        if(!big) break;
+        want[big] -= 1; sum -= 1;
+      }
+    }
+
+    for(const m of dayMuscles){
+      if(want[m] < 2) continue;
+      const chosen = pickExercises(m, want[m], eqSet, usedPat, input.goal, di);
+      for(const c of chosen){ c.sets = clamp(c.sets, 2, 5); items.push(c); }
+    }
+    return {key:d.name, name:d.name, exercises:items};
+  });
+
+  const achieved = {};
+  MUSCLES.forEach(m=> achieved[m]=0);
+  days.forEach(d=> d.exercises.forEach(x=> achieved[x.muscle]+=x.sets));
+
+  return {
+    meta:{split:split.name, days:input.days, goal:input.goal, level:input.level, minutes:input.minutes, legs:input.legs},
+    days,
+    weeklyVolume:achieved,
+    target:vol,
+    progression: input.goal==="str"
+      ? "Линейно-волновая: на главных базовых добавляй ~2.5 кг когда выбил все подходы в верхе диапазона при RIR 2. Аксессуары — двойная прогрессия."
+      : "Двойная прогрессия: держи диапазон повторов, добавляй по повтору; выбил верх во всех подходах при RIR ≤1 → +вес (2.5 кг база / 1–2 кг изоляция). Делоад на 7–8 неделе.",
+    notes: buildNotes(input, split, achieved, vol)
+  };
+}
+
+function buildNotes(input, split, achieved, target){
+  const notes=[];
+  notes.push("Сплит: "+split.name+" — "+input.days+" дн/нед.");
+  if(!input.legs) notes.push("Ноги исключены по твоему выбору — программа только на верх.");
+  const emph=(input.emphasis||[]).map(m=>MUSCLE_RU[m]).filter(Boolean);
+  if(emph.length) notes.push("Акцент: "+emph.join(", ")+" (объём поднят).");
+  notes.push(input.goal==="str"?"Цель — сила: мало повторов на базе, больше отдых (3–5 мин), техника в приоритете."
+    : input.goal==="hybrid"?"Цель — сила+масса: тяжёлая база в 4–6 + гипертрофийная подсобка."
+    : "Цель — гипертрофия: 6–15 повторов, RIR 0–2, отдых 1.5–3 мин.");
+  return notes;
+}
+
+"use strict";
+
+const FOODS = [
+  {id:"chicken_breast", ru:"Куриная грудка", cat:"protein", kcal:165, p:31, f:3.6, c:0, fib:0, tags:[], cost:1, prep:"cook"},
+  {id:"turkey_fillet", ru:"Филе индейки", cat:"protein", kcal:150, p:29, f:3, c:0, fib:0, tags:[], cost:2, prep:"cook"},
+  {id:"beef_mince_5", ru:"Говяжий фарш 5%", cat:"protein", kcal:150, p:21, f:7, c:0, fib:0, tags:["beef"], cost:2, prep:"cook"},
+  {id:"pork_lean", ru:"Свинина нежирная", cat:"protein", kcal:180, p:21, f:10, c:0, fib:0, tags:["pork"], cost:2, prep:"cook"},
+  {id:"cod", ru:"Треска", cat:"protein", kcal:82, p:18, f:0.7, c:0, fib:0, tags:["fish"], cost:2, prep:"cook"},
+  {id:"mackerel", ru:"Скумбрия", cat:"protein", kcal:191, p:18, f:13, c:0, fib:0, tags:["fish"], cost:1, prep:"cook"},
+  {id:"salmon", ru:"Лосось", cat:"protein", kcal:208, p:20, f:13, c:0, fib:0, tags:["fish"], cost:3, prep:"cook"},
+  {id:"tuna_can", ru:"Тунец консервированный", cat:"protein", kcal:116, p:26, f:1, c:0, fib:0, tags:["fish"], cost:2, prep:"none"},
+  {id:"shrimp", ru:"Креветки", cat:"protein", kcal:99, p:24, f:0.3, c:0, fib:0, tags:["shellfish"], cost:3, prep:"cook"},
+  {id:"eggs", ru:"Яйца куриные", cat:"protein", kcal:143, p:13, f:10, c:0.7, fib:0, tags:["egg"], cost:1, prep:"cook"},
+  {id:"egg_whites", ru:"Яичные белки", cat:"protein", kcal:52, p:11, f:0.2, c:0.7, fib:0, tags:["egg"], cost:2, prep:"cook"},
+  {id:"cottage_cheese", ru:"Творог 5%", cat:"protein", kcal:121, p:17, f:5, c:3, fib:0, tags:["milk","lactose_low"], cost:1, prep:"none"},
+  {id:"cottage_cheese_0", ru:"Творог обезжиренный", cat:"protein", kcal:71, p:16, f:0.6, c:1.8, fib:0, tags:["milk","lactose_low"], cost:1, prep:"none"},
+  {id:"greek_yogurt", ru:"Греческий йогурт", cat:"protein", kcal:59, p:10, f:0.4, c:3.6, fib:0, tags:["milk","lactose_low"], cost:2, prep:"none"},
+  {id:"kefir", ru:"Кефир 1%", cat:"protein", kcal:40, p:3, f:1, c:4, fib:0, tags:["milk","lactose_low"], cost:1, prep:"none"},
+  {id:"milk", ru:"Молоко 2.5%", cat:"protein", kcal:52, p:2.8, f:2.5, c:4.7, fib:0, tags:["milk","lactose"], cost:1, prep:"none"},
+  {id:"hard_cheese", ru:"Сыр твёрдый", cat:"protein", kcal:364, p:25, f:29, c:0, fib:0, tags:["milk","lactose_low"], cost:2, prep:"none"},
+  {id:"whey", ru:"Сывороточный протеин", cat:"protein", kcal:400, p:80, f:5, c:8, fib:0, tags:["milk","supplement"], cost:2, prep:"none"},
+  {id:"soy_protein", ru:"Соевый протеин", cat:"protein", kcal:380, p:80, f:2, c:5, fib:2, tags:["soy","supplement","vegan"], cost:2, prep:"none"},
+  {id:"pea_protein", ru:"Гороховый протеин", cat:"protein", kcal:390, p:80, f:6, c:3, fib:3, tags:["supplement","vegan"], cost:2, prep:"none"},
+  {id:"tofu", ru:"Тофу", cat:"protein", kcal:144, p:16, f:9, c:2, fib:1, tags:["soy","vegan"], cost:2, prep:"quick"},
+  {id:"lentils", ru:"Чечевица (сухая)", cat:"protein", kcal:352, p:25, f:1, c:60, fib:11, tags:["vegan","fodmap"], cost:1, prep:"cook"},
+  {id:"chickpeas", ru:"Нут (сухой)", cat:"protein", kcal:364, p:19, f:6, c:61, fib:17, tags:["vegan","fodmap"], cost:1, prep:"cook"},
+  {id:"beans_red", ru:"Фасоль красная (сухая)", cat:"protein", kcal:333, p:24, f:1, c:60, fib:15, tags:["vegan","fodmap"], cost:1, prep:"cook"},
+
+  {id:"oats", ru:"Овсянка", cat:"carb", kcal:379, p:13, f:7, c:67, fib:10, tags:["gluten_trace","vegan"], cost:1, prep:"quick"},
+  {id:"rice_white", ru:"Рис белый", cat:"carb", kcal:365, p:7, f:1, c:80, fib:1, tags:["vegan","gf"], cost:1, prep:"cook"},
+  {id:"buckwheat", ru:"Гречка", cat:"carb", kcal:343, p:13, f:3, c:72, fib:10, tags:["vegan","gf"], cost:1, prep:"cook"},
+  {id:"pasta", ru:"Макароны твёрдых сортов", cat:"carb", kcal:371, p:13, f:1.5, c:75, fib:3, tags:["gluten","vegan"], cost:1, prep:"cook"},
+  {id:"potato", ru:"Картофель", cat:"carb", kcal:77, p:2, f:0.1, c:17, fib:2, tags:["vegan","gf"], cost:1, prep:"cook"},
+  {id:"sweet_potato", ru:"Батат", cat:"carb", kcal:86, p:1.6, f:0.1, c:20, fib:3, tags:["vegan","gf"], cost:2, prep:"cook"},
+  {id:"bread_whole", ru:"Хлеб цельнозерновой", cat:"carb", kcal:247, p:9, f:3, c:41, fib:7, tags:["gluten","vegan"], cost:1, prep:"none"},
+  {id:"bread_gf", ru:"Хлеб безглютеновый", cat:"carb", kcal:250, p:5, f:4, c:47, fib:4, tags:["vegan","gf"], cost:3, prep:"none"},
+  {id:"banana", ru:"Банан", cat:"carb", kcal:89, p:1.1, f:0.3, c:23, fib:2.6, tags:["vegan","gf"], cost:1, prep:"none"},
+  {id:"apple", ru:"Яблоко", cat:"carb", kcal:52, p:0.3, f:0.2, c:14, fib:2.4, tags:["vegan","gf","fodmap"], cost:1, prep:"none"},
+  {id:"berries", ru:"Ягоды", cat:"carb", kcal:57, p:0.7, f:0.3, c:14, fib:2.4, tags:["vegan","gf"], cost:2, prep:"none"},
+  {id:"honey", ru:"Мёд", cat:"carb", kcal:304, p:0.3, f:0, c:82, fib:0, tags:["vegan","gf","fodmap"], cost:2, prep:"none"},
+
+  {id:"olive_oil", ru:"Оливковое масло", cat:"fat", kcal:884, p:0, f:100, c:0, fib:0, tags:["vegan","gf"], cost:2, prep:"none"},
+  {id:"butter", ru:"Сливочное масло", cat:"fat", kcal:717, p:0.9, f:81, c:0.1, fib:0, tags:["milk","lactose_low"], cost:2, prep:"none"},
+  {id:"peanut_butter", ru:"Арахисовая паста", cat:"fat", kcal:588, p:25, f:50, c:20, fib:6, tags:["peanut","vegan"], cost:1, prep:"none"},
+  {id:"almonds", ru:"Миндаль", cat:"fat", kcal:579, p:21, f:50, c:22, fib:12, tags:["treenut","vegan","gf"], cost:3, prep:"none"},
+  {id:"walnuts", ru:"Грецкий орех", cat:"fat", kcal:654, p:15, f:65, c:14, fib:7, tags:["treenut","vegan","gf"], cost:2, prep:"none"},
+  {id:"avocado", ru:"Авокадо", cat:"fat", kcal:160, p:2, f:15, c:9, fib:7, tags:["vegan","gf"], cost:3, prep:"none"},
+  {id:"seeds_sunflower", ru:"Семечки подсолнуха", cat:"fat", kcal:584, p:21, f:51, c:20, fib:9, tags:["vegan","gf"], cost:1, prep:"none"},
+
+  {id:"broccoli", ru:"Брокколи", cat:"veg", kcal:34, p:2.8, f:0.4, c:7, fib:2.6, tags:["vegan","gf"], cost:1, prep:"quick"},
+  {id:"cucumber", ru:"Огурцы", cat:"veg", kcal:15, p:0.7, f:0.1, c:3.6, fib:0.5, tags:["vegan","gf"], cost:1, prep:"none"},
+  {id:"tomato", ru:"Помидоры", cat:"veg", kcal:18, p:0.9, f:0.2, c:3.9, fib:1.2, tags:["vegan","gf"], cost:1, prep:"none"},
+  {id:"carrot", ru:"Морковь", cat:"veg", kcal:41, p:0.9, f:0.2, c:10, fib:2.8, tags:["vegan","gf"], cost:1, prep:"none"},
+  {id:"cabbage", ru:"Капуста", cat:"veg", kcal:25, p:1.3, f:0.1, c:6, fib:2.5, tags:["vegan","gf"], cost:1, prep:"none"},
+  {id:"spinach", ru:"Шпинат", cat:"veg", kcal:23, p:2.9, f:0.4, c:3.6, fib:2.2, tags:["vegan","gf"], cost:2, prep:"quick"},
+  {id:"mixed_veg", ru:"Овощная смесь", cat:"veg", kcal:45, p:2, f:0.3, c:9, fib:3, tags:["vegan","gf"], cost:1, prep:"quick"}
+];
+
+const RESTRICTIONS = {
+  lactose:      {excludeTags:["lactose"], note:"Твёрдый сыр, творог и йогурт обычно переносятся — оставлены."},
+  milk_allergy: {excludeTags:["milk","lactose"], note:"Молочное исключено полностью, включая сывороточный протеин."},
+  gluten:       {excludeTags:["gluten"], note:"Овсянку бери с маркировкой «без глютена»."},
+  celiac:       {excludeTags:["gluten","gluten_trace"], note:"Исключены все злаки со следами глютена."},
+  egg:          {excludeTags:["egg"], note:""},
+  peanut:       {excludeTags:["peanut"], note:""},
+  treenut:      {excludeTags:["treenut"], note:""},
+  soy:          {excludeTags:["soy"], note:""},
+  fish:         {excludeTags:["fish"], note:"Добавь омега-3 (водорослевую или льняное масло)."},
+  shellfish:    {excludeTags:["shellfish"], note:""},
+  vegetarian:   {excludeTags:["fish","shellfish","beef","pork"], excludeCatMeat:true, note:"Молочное и яйца оставлены."},
+  vegan:        {excludeTags:["milk","lactose","lactose_low","egg","fish","shellfish","beef","pork"], excludeCatMeat:true,
+                 note:"Белок поднят до 2.2 г/кг (растительный усваивается хуже). Добавь B12, креатин, омега-3 из водорослей."},
+  pescatarian:  {excludeTags:["beef","pork"], excludeCatMeat:true, keepFish:true, note:"Рыба и морепродукты оставлены."},
+  halal:        {excludeTags:["pork"], note:""},
+  no_beef:      {excludeTags:["beef"], note:""},
+  fodmap:       {excludeTags:["fodmap"], note:"Бобовые и часть фруктов убраны — вводи их обратно постепенно."}
+};
+
+const MEAT_IDS = ["chicken_breast","turkey_fillet","beef_mince_5","pork_lean"];
+const FISH_IDS = ["cod","mackerel","salmon","tuna_can","shrimp"];
+
+function clamp(x,a,b){ return Math.max(a, Math.min(b,x)); }
+function r(x){ return Math.round(x); }
+
+function bmr(input){
+  const s = input.sex==="f" ? -161 : 5;
+  if(input.bodyfat && input.bodyfat>3 && input.bodyfat<60){
+    const lbm = input.weight*(1-input.bodyfat/100);
+    return {value: 370 + 21.6*lbm, formula:"Кетч-МакАрдл (по % жира)"};
+  }
+  return {value: 10*input.weight + 6.25*input.height - 5*input.age + s, formula:"Миффлина–Сан Жеора"};
+}
+
+const ACTIVITY = {
+  sed:   {mul:1.2,   ru:"Сидячий образ жизни"},
+  light: {mul:1.375, ru:"Лёгкая активность (1–3 трен/нед)"},
+  mod:   {mul:1.55,  ru:"Средняя (3–5 трен/нед)"},
+  high:  {mul:1.725, ru:"Высокая (6–7 трен/нед)"},
+  ath:   {mul:1.9,   ru:"Очень высокая (физическая работа + спорт)"}
+};
+
+function energy(input){
+  const b = bmr(input);
+  const act = ACTIVITY[input.activity] || ACTIVITY.light;
+  const tdee = b.value*act.mul;
+  let target, rate, label;
+  switch(input.goal){
+    case "cut":    target = tdee*0.80; rate="−0.5…−0.7 кг/нед"; label="Жиросжигание"; break;
+    case "bulk":   target = tdee*1.10; rate="+0.2…+0.35 кг/нед"; label="Набор массы"; break;
+    case "recomp": target = tdee*1.00; rate="вес держится ровно"; label="Рекомпозиция"; break;
+    default:       target = tdee;      rate="вес держится ровно"; label="Поддержание";
+  }
+  const floor = input.sex==="f" ? 1200 : 1500;
+  if(target < floor) target = floor;
+  return {bmr:r(b.value), formula:b.formula, tdee:r(tdee), target:r(target), rate, label, activity:act.ru};
+}
+
+function macros(input, kcal){
+  const w = input.weight;
+  const set = new Set(input.restrictions||[]);
+  let pPerKg = 2.0;
+  if(input.goal==="cut") pPerKg = 2.2;
+  if(set.has("vegan")) pPerKg += 0.2;
+  if(input.age>=45) pPerKg = Math.max(pPerKg, 2.0);
+  let protein = r(w*pPerKg);
+
+  let fat = r(Math.max(w*0.8, kcal*0.22/9));
+  let carbKcal = kcal - protein*4 - fat*9;
+  if(carbKcal < kcal*0.15){
+    fat = r(Math.max(w*0.5, (kcal - protein*4 - kcal*0.15)/9));
+    carbKcal = kcal - protein*4 - fat*9;
+  }
+  if(carbKcal < 0){
+    protein = r((kcal - fat*9)*0.45/4);
+    carbKcal = kcal - protein*4 - fat*9;
+  }
+  const carbs = r(Math.max(0, carbKcal/4));
+  const fiber = r(kcal/1000*14);
+  return {protein, fat, carbs, fiber, pPerKg:Math.round(pPerKg*10)/10};
+}
+
+function allowedFoods(restrictions){
+  const set = new Set(restrictions||[]);
+  const banTags = new Set();
+  let banMeat=false, keepFish=false;
+  const notes=[];
+  set.forEach(kR=>{
+    const rule = RESTRICTIONS[kR];
+    if(!rule) return;
+    (rule.excludeTags||[]).forEach(t=>banTags.add(t));
+    if(rule.excludeCatMeat) banMeat=true;
+    if(rule.keepFish) keepFish=true;
+    if(rule.note) notes.push(rule.note);
+  });
+  const banIds = new Set(restrictions && restrictions.filter(x=>x.indexOf("no:")===0).map(x=>x.slice(3)) || []);
+  const foods = FOODS.filter(f=>{
+    if(banIds.has(f.id)) return false;
+    if(banMeat && MEAT_IDS.indexOf(f.id)>=0) return false;
+    if(banMeat && !keepFish && FISH_IDS.indexOf(f.id)>=0) return false;
+    for(const t of f.tags){ if(banTags.has(t)) return false; }
+    return true;
+  });
+  return {foods, notes};
+}
+
+function pickRot(list, i){ return list.length ? list[i % list.length] : null; }
+
+function buildMeals(input, m, foods, dayIndex){
+  const nMeals = clamp(input.meals||4, 3, 6);
+  const proteins = foods.filter(f=>f.cat==="protein" && f.p>=10);
+  const carbsF = foods.filter(f=>f.cat==="carb");
+  const fatsF = foods.filter(f=>f.cat==="fat");
+  const vegF = foods.filter(f=>f.cat==="veg");
+  if(!proteins.length) return {error:"Не осталось источников белка — ослабь ограничения."};
+
+  const pPer = m.protein/nMeals;
+  const cPer = m.carbs/nMeals;
+  const fPer = m.fat/nMeals;
+  const meals=[];
+  for(let i=0;i<nMeals;i++){
+    const pf = pickRot(proteins, i + dayIndex*2);
+    const cf = pickRot(carbsF, i + dayIndex);
+    const ff = pickRot(fatsF, i + dayIndex);
+    const vf = pickRot(vegF, i + dayIndex);
+    const gV = (vf && i<nMeals-1) ? 150 : 0;
+    const useFat = !!ff;
+    let gP = clamp(pPer/(pf.p/100), 30, 400);
+    let gC = cf ? clamp(cPer/Math.max(cf.c/100,0.01), 20, 400) : 0;
+    let gF = useFat ? clamp(fPer/Math.max(ff.f/100,0.01)*0.5, 3, 60) : 0;
+
+    for(let it=0; it<12; it++){
+      const curP = gP*pf.p/100 + (cf?gC*cf.c*0+gC*cf.p/100:0) + (useFat?gF*ff.p/100:0) + (gV?gV*vf.p/100:0);
+      const curC = gP*pf.c/100 + (cf?gC*cf.c/100:0) + (useFat?gF*ff.c/100:0) + (gV?gV*vf.c/100:0);
+      const curF = gP*pf.f/100 + (cf?gC*cf.f/100:0) + (useFat?gF*ff.f/100:0) + (gV?gV*vf.f/100:0);
+      if(pf.p>0) gP = clamp(gP + (pPer-curP)/(pf.p/100)*0.7, 30, 400);
+      if(cf && cf.c>0) gC = clamp(gC + (cPer-curC)/(cf.c/100)*0.7, 20, 400);
+      if(useFat && ff.f>0) gF = clamp(gF + (fPer-curF)/(ff.f/100)*0.7, 0, 60);
+    }
+    const items=[];
+    items.push(mkItem(pf, Math.round(gP/5)*5));
+    if(cf) items.push(mkItem(cf, Math.round(gC/5)*5));
+    if(useFat && gF>=3) items.push(mkItem(ff, Math.round(gF/2)*2));
+    if(gV) items.push(mkItem(vf, gV));
+    const tot = items.reduce((a,x)=>({kcal:a.kcal+x.kcal,p:a.p+x.p,f:a.f+x.f,c:a.c+x.c,fib:a.fib+x.fib}),{kcal:0,p:0,f:0,c:0,fib:0});
+    meals.push({name: mealName(i,nMeals), items, total:{kcal:r(tot.kcal),p:r(tot.p),f:r(tot.f),c:r(tot.c),fib:r(tot.fib)}});
+  }
+  return {meals};
+}
+
+function mkItem(f, grams){
+  return {id:f.id, ru:f.ru, grams, kcal:f.kcal*grams/100, p:f.p*grams/100, f:f.f*grams/100, c:f.c*grams/100, fib:f.fib*grams/100};
+}
+
+function mealName(i,n){
+  if(n===3) return ["Завтрак","Обед","Ужин"][i];
+  if(n===4) return ["Завтрак","Обед","Перекус","Ужин"][i];
+  if(n===5) return ["Завтрак","Перекус","Обед","Перекус 2","Ужин"][i];
+  return ["Завтрак","Перекус","Обед","Перекус 2","Ужин","Перед сном"][i];
+}
+
+function generateNutrition(input){
+  input = Object.assign({sex:"m",age:30,height:180,weight:80,activity:"light",goal:"recomp",meals:4,restrictions:[]}, input||{});
+  const e = energy(input);
+  const m = macros(input, e.target);
+  const {foods, notes} = allowedFoods(input.restrictions);
+  const day = buildMeals(input, m, foods, input.dayIndex||0);
+  const sum = day.meals ? day.meals.reduce((a,x)=>({kcal:a.kcal+x.total.kcal,p:a.p+x.total.p,f:a.f+x.total.f,c:a.c+x.total.c,fib:a.fib+x.total.fib}),{kcal:0,p:0,f:0,c:0,fib:0}) : null;
+  return {energy:e, macros:m, restrictionNotes:notes, foodsAvailable:foods.length, day, actual:sum ? {kcal:r(sum.kcal),p:r(sum.p),f:r(sum.f),c:r(sum.c),fib:r(sum.fib)} : null};
+}
+
+return {generateProgram:generateProgram, generateNutrition:generateNutrition, MUSCLE_RU:MUSCLE_RU, FOODS:FOODS, RESTRICTIONS:RESTRICTIONS};
+})();
+(function(){
+"use strict";
+var KEY="forge_v1";
+var S=null, mem=null;
+
+function load(){ try{var r=localStorage.getItem(KEY); if(r) return JSON.parse(r);}catch(e){} return null; }
+function save(){ try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){ mem=S; } }
+S = load() || mem || {step:"intro", profile:null, program:null, nutrition:null, log:{}, history:[], week:1, tab:"train", dayIdx:0};
+
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];}); }
+function el(tag, cls, html){ var e=document.createElement(tag); if(cls)e.className=cls; if(html!=null)e.innerHTML=html; return e; }
+
+var Q = [
+  {id:"sex", q:"Пол", type:"pick", opts:[{v:"m",l:"Мужской"},{v:"f",l:"Женский"}]},
+  {id:"age", q:"Возраст", type:"num", unit:"лет", min:14, max:80, def:30},
+  {id:"height", q:"Рост", type:"num", unit:"см", min:130, max:220, def:180},
+  {id:"weight", q:"Вес", type:"num", unit:"кг", min:35, max:200, def:80},
+  {id:"level", q:"Стаж тренировок", type:"pick", opts:[
+    {v:"beg",l:"Новичок",d:"меньше года"},{v:"int",l:"Средний",d:"1–4 года"},{v:"adv",l:"Опытный",d:"больше 4 лет"}]},
+  {id:"goal", q:"Главная цель", type:"pick", opts:[
+    {v:"hyp",l:"Набрать мышцы",d:"гипертрофия, 6–15 повторов"},
+    {v:"str",l:"Стать сильнее",d:"сила, 3–6 повторов"},
+    {v:"hybrid",l:"Сила + масса",d:"тяжёлая база + подсобка"}]},
+  {id:"days", q:"Сколько дней в неделю", type:"pick", opts:[
+    {v:2,l:"2 дня"},{v:3,l:"3 дня"},{v:4,l:"4 дня"},{v:5,l:"5 дней"},{v:6,l:"6 дней"}]},
+  {id:"minutes", q:"Длительность тренировки", type:"pick", opts:[
+    {v:45,l:"45 минут"},{v:60,l:"60 минут"},{v:75,l:"75 минут"},{v:90,l:"90 минут"}]},
+  {id:"legs", q:"Тренируешь ноги?", type:"pick", opts:[
+    {v:true,l:"Да",d:"полноценная программа"},{v:false,l:"Нет",d:"только верх тела"}]},
+  {id:"emphasis", q:"Что хочешь подтянуть особенно?", type:"multi", opts:[
+    {v:"chest",l:"Грудь"},{v:"lats",l:"Спина"},{v:"sdelt",l:"Плечи"},{v:"biceps",l:"Бицепс"},
+    {v:"triceps",l:"Трицепс"},{v:"quads",l:"Ноги"},{v:"glutes",l:"Ягодицы"},{v:"core",l:"Пресс"}], optional:true},
+  {id:"equipment", q:"Что есть в зале?", type:"multi", opts:[
+    {v:"bb",l:"Штанга"},{v:"db",l:"Гантели"},{v:"cable",l:"Блоки"},{v:"machine",l:"Тренажёры"},{v:"bw",l:"Турник/брусья"}], defAll:true},
+  {id:"activity", q:"Активность вне зала", type:"pick", opts:[
+    {v:"sed",l:"Сидячая",d:"офис, мало хожу"},{v:"light",l:"Лёгкая",d:"немного хожу"},
+    {v:"mod",l:"Средняя",d:"много хожу"},{v:"high",l:"Высокая",d:"физический труд"}]},
+  {id:"nutgoal", q:"Цель по питанию", type:"pick", opts:[
+    {v:"recomp",l:"Рекомпозиция",d:"мышцы при том же весе"},
+    {v:"bulk",l:"Набор массы",d:"+10% калорий"},
+    {v:"cut",l:"Жиросжигание",d:"−20% калорий"},
+    {v:"maintain",l:"Поддержание",d:"без изменений"}]},
+  {id:"meals", q:"Сколько приёмов пищи в день", type:"pick", opts:[
+    {v:3,l:"3"},{v:4,l:"4"},{v:5,l:"5"},{v:6,l:"6"}]},
+  {id:"restrictions", q:"Ограничения в еде", sub:"Отметь всё, что подходит", type:"multi", opts:[
+    {v:"lactose",l:"Непереносимость лактозы"},{v:"milk_allergy",l:"Аллергия на молоко"},
+    {v:"gluten",l:"Без глютена"},{v:"celiac",l:"Целиакия"},
+    {v:"egg",l:"Аллергия на яйца"},{v:"peanut",l:"Аллергия на арахис"},
+    {v:"treenut",l:"Аллергия на орехи"},{v:"soy",l:"Аллергия на сою"},
+    {v:"fish",l:"Аллергия на рыбу"},{v:"shellfish",l:"Аллергия на морепродукты"},
+    {v:"vegetarian",l:"Вегетарианство"},{v:"vegan",l:"Веганство"},
+    {v:"pescatarian",l:"Пескетарианство"},{v:"halal",l:"Без свинины"},
+    {v:"no_beef",l:"Без говядины"},{v:"fodmap",l:"Проблемы с ЖКТ (FODMAP)"}], optional:true}
+];
+
+var draft = {};
+var qi = 0;
+
+function startWizard(){ draft = {}; qi = 0; S.step="wizard"; save(); render(); }
+
+function renderWizard(){
+  var root = $("app"); root.innerHTML="";
+  var q = Q[qi];
+  var head = el("div","wz-head");
+  head.appendChild(el("div","wz-prog","<span style=\"width:"+Math.round((qi)/Q.length*100)+"%\"></span>"));
+  head.appendChild(el("div","wz-count", (qi+1)+" из "+Q.length));
+  root.appendChild(head);
+  root.appendChild(el("h2","wz-q", esc(q.q)));
+  if(q.sub) root.appendChild(el("p","wz-sub", esc(q.sub)));
+
+  var box = el("div","wz-body");
+  if(q.type==="pick"){
+    q.opts.forEach(function(o){
+      var b = el("button","opt", "<b>"+esc(o.l)+"</b>"+(o.d?"<i>"+esc(o.d)+"</i>":""));
+      b.onclick=function(){ draft[q.id]=o.v; next(); };
+      if(draft[q.id]===o.v) b.classList.add("on");
+      box.appendChild(b);
+    });
+  } else if(q.type==="num"){
+    var wrap = el("div","numwrap");
+    var inp = el("input"); inp.type="text"; inp.inputMode="numeric"; inp.className="numin";
+    inp.value = draft[q.id]!=null?draft[q.id]:(q.def||"");
+    wrap.appendChild(inp); wrap.appendChild(el("span","numunit",esc(q.unit)));
+    box.appendChild(wrap);
+    var go = el("button","accent-btn","Дальше");
+    go.onclick=function(){
+      var v=parseFloat(String(inp.value).replace(",","."));
+      if(!v||v<q.min||v>q.max){ toast("Введи значение "+q.min+"–"+q.max); return; }
+      draft[q.id]=v; next();
+    };
+    box.appendChild(go);
+    setTimeout(function(){ inp.focus(); },80);
+  } else if(q.type==="multi"){
+    if(!draft[q.id]) draft[q.id] = q.defAll ? q.opts.map(function(o){return o.v;}) : [];
+    var grid = el("div","multi");
+    q.opts.forEach(function(o){
+      var b = el("button","chip", esc(o.l));
+      if(draft[q.id].indexOf(o.v)>=0) b.classList.add("on");
+      b.onclick=function(){
+        var a=draft[q.id], i=a.indexOf(o.v);
+        if(i>=0) a.splice(i,1); else a.push(o.v);
+        b.classList.toggle("on");
+      };
+      grid.appendChild(b);
+    });
+    box.appendChild(grid);
+    var go2 = el("button","accent-btn", q.optional?"Дальше":"Готово");
+    go2.onclick=function(){ next(); };
+    box.appendChild(go2);
+  }
+  root.appendChild(box);
+  if(qi>0){
+    var back = el("button","ghost-btn","← Назад");
+    back.onclick=function(){ qi--; render(); };
+    root.appendChild(back);
+  }
+}
+
+function next(){
+  qi++;
+  if(qi>=Q.length){ finish(); return; }
+  render();
+}
+
+function finish(){
+  var p = {
+    sex:draft.sex, age:draft.age, height:draft.height, weight:draft.weight,
+    level:draft.level, goal:draft.goal, days:draft.days, minutes:draft.minutes,
+    legs:draft.legs, emphasis:draft.emphasis||[], equipment:(draft.equipment&&draft.equipment.length?draft.equipment:["bb","db","cable","machine","bw"]),
+    activity:draft.activity, nutgoal:draft.nutgoal, meals:draft.meals, restrictions:draft.restrictions||[]
+  };
+  S.profile = p;
+  S.program = FORGE.generateProgram({level:p.level,days:p.days,minutes:p.minutes,goal:p.goal,legs:p.legs,emphasis:p.emphasis,equipment:p.equipment});
+  S.nutrition = FORGE.generateNutrition({sex:p.sex,age:p.age,height:p.height,weight:p.weight,activity:p.activity,goal:p.nutgoal,meals:p.meals,restrictions:p.restrictions});
+  S.step="app"; S.tab="train"; S.dayIdx=0; S.log={}; S.week=1;
+  save(); render();
+}
+
+function setsForWeek(base, w){
+  if(w<=2) return Math.max(2, base-1);
+  if(w>=7) return Math.max(2, base-1);
+  return base;
+}
+
+function logKey(di, xi, si){ return S.week+"|"+di+"|"+xi+"|"+si; }
+
+function renderApp(){
+  var root=$("app"); root.innerHTML="";
+  var prog=S.program, nut=S.nutrition;
+
+  var top = el("div","topbar");
+  top.appendChild(el("div","brand","<b>FORGE</b><span>"+esc(prog.meta.split)+"</span>"));
+  var wk = el("div","weekbar");
+  var pm = el("button","stp","◀"); pm.onclick=function(){ if(S.week>1){S.week--; save(); render();} };
+  var pp = el("button","stp","▶"); pp.onclick=function(){ if(S.week<8){S.week++; save(); render();} };
+  var ph = phaseFor(S.week);
+  wk.appendChild(pm);
+  wk.appendChild(el("div","wkmid","<b>Неделя "+S.week+"</b><i>"+esc(ph)+"</i>"));
+  wk.appendChild(pp);
+  top.appendChild(wk);
+  root.appendChild(top);
+
+  var tabs = el("div","tabs");
+  [["train","Тренировки"],["food","Питание"],["prof","Профиль"]].forEach(function(t){
+    var b=el("button","tab",t[1]);
+    if(S.tab===t[0]) b.classList.add("on");
+    b.onclick=function(){ S.tab=t[0]; save(); render(); };
+    tabs.appendChild(b);
+  });
+  root.appendChild(tabs);
+
+  var main = el("div","main");
+  if(S.tab==="train") renderTrain(main, prog);
+  else if(S.tab==="food") renderFood(main, nut);
+  else renderProfile(main);
+  root.appendChild(main);
+}
+
+function phaseFor(w){
+  if(w<=2) return "Вкатывание · RIR 3–4";
+  if(w<=4) return "Разгон · RIR 2–3";
+  if(w<=6) return "Пик · RIR 1–2";
+  if(w===7) return "Делоад · объём вдвое";
+  return "Проходка · тест силы";
+}
+
+function renderTrain(main, prog){
+  var nav = el("div","daynav");
+  prog.days.forEach(function(d,i){
+    var b=el("button","dbtn", esc(d.name));
+    if(i===S.dayIdx) b.classList.add("on");
+    b.onclick=function(){ S.dayIdx=i; save(); render(); };
+    nav.appendChild(b);
+  });
+  main.appendChild(nav);
+
+  var day = prog.days[S.dayIdx];
+  var totalSets=0, doneSets=0;
+  day.exercises.forEach(function(x,xi){
+    var n = setsForWeek(x.sets, S.week);
+    totalSets += n;
+    for(var si=0; si<n; si++){ if(S.log[logKey(S.dayIdx,xi,si)] && S.log[logKey(S.dayIdx,xi,si)].done) doneSets++; }
+  });
+  var bar = el("div","progbar","<span style=\"width:"+(totalSets?Math.round(doneSets/totalSets*100):0)+"%\"></span>");
+  var pw = el("div","progwrap"); pw.appendChild(bar);
+  pw.appendChild(el("span","progtxt", doneSets+"/"+totalSets+" подх."));
+  main.appendChild(pw);
+
+  day.exercises.forEach(function(x, xi){
+    var card = el("div","card");
+    card.appendChild(el("h3",null, esc(x.name)));
+    var n = setsForWeek(x.sets, S.week);
+    card.appendChild(el("div","cmeta","<b>"+n+" × "+esc(x.reps)+"</b> · RIR "+esc(x.rir)+" · "+esc(FORGE.MUSCLE_RU[x.muscle]||"")));
+    if(x.cue) card.appendChild(el("p","cue", esc(x.cue)));
+    var sets = el("div","sets");
+    for(var si=0; si<n; si++){
+      (function(si){
+        var k = logKey(S.dayIdx, xi, si);
+        var rec = S.log[k] || {w:"",r:"",done:false};
+        var row = el("div","srow"+(rec.done?" done":""));
+        row.appendChild(el("span","snum", String(si+1)));
+        var f1=el("div","fld"); var i1=el("input"); i1.type="text"; i1.inputMode="decimal"; i1.value=rec.w; i1.placeholder="";
+        i1.oninput=function(){ rec.w=i1.value; S.log[k]=rec; save(); };
+        f1.appendChild(i1); f1.appendChild(el("span","unit","кг")); row.appendChild(f1);
+        var f2=el("div","fld"); var i2=el("input"); i2.type="text"; i2.inputMode="numeric"; i2.value=rec.r;
+        i2.oninput=function(){ rec.r=i2.value; S.log[k]=rec; save(); };
+        f2.appendChild(i2); f2.appendChild(el("span","unit","повт")); row.appendChild(f2);
+        var ck=el("button","ck","✓");
+        ck.onclick=function(){ rec.done=!rec.done; S.log[k]=rec; save(); render(); };
+        row.appendChild(ck);
+        sets.appendChild(row);
+      })(si);
+    }
+    card.appendChild(sets);
+    main.appendChild(card);
+  });
+
+  var fin = el("button","accent-btn","Завершить тренировку");
+  fin.onclick=function(){ finishSession(); };
+  main.appendChild(fin);
+
+  if(S.history.length){
+    var h=el("div","block");
+    h.appendChild(el("h4","bh","Последние тренировки"));
+    S.history.slice(-5).reverse().forEach(function(r){
+      h.appendChild(el("div","hrow", esc(r.d)+" · "+esc(r.day)+" · "+r.total+" кг тоннаж"));
+    });
+    main.appendChild(h);
+  }
+}
+
+function finishSession(){
+  var day=S.program.days[S.dayIdx], total=0, any=false;
+  day.exercises.forEach(function(x,xi){
+    var n=setsForWeek(x.sets,S.week);
+    for(var si=0;si<n;si++){
+      var r=S.log[logKey(S.dayIdx,xi,si)];
+      if(r){ var w=parseFloat(String(r.w).replace(",","."))||0, rr=parseFloat(r.r)||0; if(w>0&&rr>0){ total+=w*rr; any=true; } }
+    }
+  });
+  if(!any){ toast("Нет вписанных подходов"); return; }
+  var d=new Date();
+  var ds=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+  S.history.push({d:ds, day:day.name, total:Math.round(total), week:S.week});
+  day.exercises.forEach(function(x,xi){
+    var n=setsForWeek(x.sets,S.week);
+    for(var si=0;si<n;si++){ var k=logKey(S.dayIdx,xi,si); if(S.log[k]) S.log[k].done=false; }
+  });
+  save(); render(); toast("Записано ✓");
+}
+
+function renderFood(main, nut){
+  var e=nut.energy, m=nut.macros;
+  var tiles=el("div","tiles");
+  [["ккал",e.target],["белок",m.protein+"г"],["жиры",m.fat+"г"],["угл.",m.carbs+"г"]].forEach(function(t,i){
+    var d=el("div","tile"+(i===0?" acc":""));
+    d.appendChild(el("span","tk",t[0]));
+    d.appendChild(el("span","tv",String(t[1])));
+    tiles.appendChild(d);
+  });
+  main.appendChild(tiles);
+  main.appendChild(el("p","hint", esc(e.label)+" · "+esc(e.rate)+" · TDEE ≈ "+e.tdee+" ккал ("+esc(e.formula)+")"));
+
+  if(nut.restrictionNotes && nut.restrictionNotes.length){
+    var w=el("div","warn");
+    nut.restrictionNotes.forEach(function(n){ w.appendChild(el("div",null,"⚠ "+esc(n))); });
+    main.appendChild(w);
+  }
+
+  if(nut.day && nut.day.error){ main.appendChild(el("div","warn", esc(nut.day.error))); return; }
+  (nut.day.meals||[]).forEach(function(meal){
+    var c=el("div","card");
+    c.appendChild(el("h3",null, esc(meal.name)+" <small>"+meal.total.kcal+" ккал · Б"+meal.total.p+"</small>"));
+    var ul=el("div","fitems");
+    meal.items.forEach(function(it){
+      ul.appendChild(el("div","fitem","<span>"+esc(it.ru)+"</span><b>"+it.grams+" г</b>"));
+    });
+    c.appendChild(ul);
+    main.appendChild(c);
+  });
+
+  var reroll=el("button","ghost-btn","Другой вариант меню");
+  reroll.onclick=function(){
+    var p=S.profile;
+    S.nutrition=FORGE.generateNutrition({sex:p.sex,age:p.age,height:p.height,weight:p.weight,activity:p.activity,goal:p.nutgoal,meals:p.meals,restrictions:p.restrictions,dayIndex:(S.nutrition._i||0)+1});
+    S.nutrition._i=(S.nutrition._i||0)+1;
+    save(); render();
+  };
+  main.appendChild(reroll);
+}
+
+function renderProfile(main){
+  var p=S.profile, prog=S.program;
+  var c=el("div","card");
+  c.appendChild(el("h3",null,"Профиль"));
+  var rows=[
+    ["Параметры", p.height+" см · "+p.weight+" кг · "+p.age+" лет"],
+    ["Стаж", {beg:"новичок",int:"средний",adv:"опытный"}[p.level]],
+    ["Программа", prog.meta.split],
+    ["Тренировок", p.days+"/нед по "+p.minutes+" мин"],
+    ["Цель", {hyp:"гипертрофия",str:"сила",hybrid:"сила+масса"}[p.goal]]
+  ];
+  var t=el("div","prows");
+  rows.forEach(function(r){ t.appendChild(el("div","prow","<span>"+esc(r[0])+"</span><b>"+esc(r[1])+"</b>")); });
+  c.appendChild(t);
+  main.appendChild(c);
+
+  var v=el("div","card");
+  v.appendChild(el("h3",null,"Недельный объём"));
+  var vv=el("div","prows");
+  Object.keys(prog.weeklyVolume).forEach(function(k){
+    if(prog.weeklyVolume[k]>0) vv.appendChild(el("div","prow","<span>"+esc(FORGE.MUSCLE_RU[k])+"</span><b>"+prog.weeklyVolume[k]+" подх.</b>"));
+  });
+  v.appendChild(vv);
+  main.appendChild(v);
+
+  var n=el("div","card");
+  n.appendChild(el("h3",null,"Прогрессия"));
+  n.appendChild(el("p","hint", esc(prog.progression)));
+  main.appendChild(n);
+
+  var again=el("button","ghost-btn","Пересобрать программу");
+  again.onclick=function(){ if(confirm("Заново пройти анкету? Логи тренировок сохранятся.")) startWizard(); };
+  main.appendChild(again);
+
+  var wipe=el("button","ghost-btn danger","Сбросить всё");
+  wipe.onclick=function(){
+    if(!confirm("Стереть профиль, программу и все логи?")) return;
+    try{localStorage.removeItem(KEY);}catch(e){}
+    S={step:"intro",profile:null,program:null,nutrition:null,log:{},history:[],week:1,tab:"train",dayIdx:0};
+    mem=null; save(); render();
+  };
+  main.appendChild(wipe);
+}
+
+function renderIntro(){
+  var root=$("app"); root.innerHTML="";
+  var c=el("div","intro");
+  c.appendChild(el("h1",null,"FORGE"));
+  c.appendChild(el("p","lead","Составлю тренировки и питание под тебя — по твоим данным, целям, инвентарю и ограничениям в еде."));
+  var f=el("div","feats");
+  [["Программа","сплит, объём и упражнения под твой стаж, дни и время"],
+   ["Питание","калории, макросы и меню с учётом аллергий и диет"],
+   ["Трекинг","логируешь веса, ведёшь прогресс по неделям"]].forEach(function(x){
+    f.appendChild(el("div","feat","<b>"+esc(x[0])+"</b><span>"+esc(x[1])+"</span>"));
+  });
+  c.appendChild(f);
+  var go=el("button","accent-btn big","Собрать программу");
+  go.onclick=startWizard;
+  c.appendChild(go);
+  c.appendChild(el("p","fine","Работает офлайн. Все данные остаются на твоём устройстве."));
+  root.appendChild(c);
+}
+
+var tt;
+function toast(msg){
+  var t=$("toast"); t.textContent=msg; t.classList.add("show");
+  clearTimeout(tt); tt=setTimeout(function(){ t.classList.remove("show"); },1800);
+}
+
+function render(){
+  if(S.step==="wizard") renderWizard();
+  else if(S.step==="app" && S.program) renderApp();
+  else renderIntro();
+  window.scrollTo(0,0);
+}
+
+window.FORGE_UI={render:render};
+render();
+})();
+</script>
+<script>
+if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});}
+</script>
+</body>
+</html>
