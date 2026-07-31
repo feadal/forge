@@ -233,22 +233,35 @@ function lastLogged(di, xi, si){
   return null;
 }
 
-var restTimer=null, restLeft=0;
+var restTimer=null, restLeft=0, restKey=null;
+function fmtRest(sec){
+  var m=Math.floor(sec/60), s=sec%60;
+  return m+":"+(s<10?"0":"")+s;
+}
 function stopRest(){
-  clearInterval(restTimer); restTimer=null; restLeft=0;
-  var b=document.getElementById("rest"); if(b){ b.className=""; b.innerHTML=""; }
+  clearInterval(restTimer); restTimer=null; restLeft=0; restKey=null;
+  var n=document.getElementById("restrow"); if(n && n.parentNode) n.parentNode.removeChild(n);
 }
-function paintRest(){
-  var b=document.getElementById("rest"); if(!b) return;
-  if(restLeft<=0){ stopRest(); return; }
-  var m=Math.floor(restLeft/60), s=restLeft%60;
-  b.className="show";
-  b.innerHTML='<span class="rl">Отдых</span><b class="rt">'+m+":"+(s<10?"0":"")+s+'</b>';
-  var x=el("button","rx","Стоп"); x.onclick=stopRest; b.appendChild(x);
+function tickRest(){
+  restLeft--;
+  if(restLeft<=0){ stopRest(); render(); return; }
+  var t=document.getElementById("resttime");
+  if(t) t.textContent=fmtRest(restLeft); else render();
 }
-function startRest(sec){
-  clearInterval(restTimer); restLeft=sec; paintRest();
-  restTimer=setInterval(function(){ restLeft--; paintRest(); },1000);
+function startRest(sec, key){
+  clearInterval(restTimer); restLeft=sec; restKey=key;
+  restTimer=setInterval(tickRest,1000);
+}
+function restRow(){
+  var row=el("div","restrow");
+  row.id="restrow";
+  row.appendChild(el("span","rl","Отдых"));
+  var t=el("b","rt",fmtRest(restLeft)); t.id="resttime";
+  row.appendChild(t);
+  var x=el("button","rx","Пропустить");
+  x.onclick=function(){ stopRest(); render(); };
+  row.appendChild(x);
+  return row;
 }
 
 function renderApp(){
@@ -359,11 +372,12 @@ function renderTrain(main, prog){
         var ck=el("button","ck","✓");
         ck.onclick=function(){
           rec.done=!rec.done; S.log[k]=rec; save();
-          if(rec.done) startRest(x.type==="comp" ? 150 : 90); else stopRest();
+          if(rec.done) startRest(x.type==="comp" ? 150 : 90, k); else stopRest();
           render();
         };
         row.appendChild(ck);
         sets.appendChild(row);
+        if(restKey===k && restLeft>0) sets.appendChild(restRow());
       })(si);
     }
     card.appendChild(sets);

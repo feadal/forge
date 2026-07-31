@@ -214,18 +214,15 @@ input{font-family:ui-monospace,"SF Mono",Menlo,monospace}
 .hrow{font-size:.84rem;color:var(--text);padding:10px 0;border-bottom:1px solid var(--line-soft)}
 .hrow:last-child{border-bottom:none}
 
-#rest{position:fixed;left:0;right:0;bottom:0;z-index:60;display:none;
-  align-items:center;justify-content:center;gap:14px;
-  padding:14px 18px calc(14px + env(safe-area-inset-bottom));
-  background:var(--surface);border-top:1px solid var(--line);
-  box-shadow:0 -8px 28px -14px rgba(0,0,0,.8)}
-#rest.show{display:flex}
-#rest .rl{font-size:.8rem;color:var(--muted);font-weight:600}
-#rest .rt{font-size:1.7rem;font-weight:750;color:var(--accent);
+.restrow{display:flex;align-items:center;gap:12px;margin-top:2px;padding:11px 12px;
+  border-radius:var(--r-sm);background:var(--accent-glow);
+  border:1px solid color-mix(in srgb,var(--accent) 30%,transparent)}
+.restrow .rl{font-size:.79rem;color:var(--muted);font-weight:600}
+.restrow .rt{flex:1;font-size:1.35rem;font-weight:750;color:var(--accent);
   font-family:ui-monospace,"SF Mono",Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
-#rest .rx{padding:9px 15px;border-radius:99px;background:var(--elev);color:var(--muted);
-  font-size:.82rem;font-weight:600}
-#rest .rx:active{background:var(--raise)}
+.restrow .rx{padding:9px 14px;border-radius:99px;background:var(--elev);color:var(--muted);
+  font-size:.79rem;font-weight:600;white-space:nowrap}
+.restrow .rx:active{background:var(--raise)}
 
 #toast{position:fixed;left:50%;bottom:30px;transform:translateX(-50%) translateY(16px);
   background:var(--strong);color:var(--bg);font-size:.86rem;font-weight:650;padding:12px 20px;
@@ -238,7 +235,6 @@ input{font-family:ui-monospace,"SF Mono",Menlo,monospace}
 </style>
 <div id="app"></div>
 <div id="toast"></div>
-<div id="rest"></div>
 <script>
 var FORGE=(function(){
 "use strict";
@@ -1195,22 +1191,35 @@ function lastLogged(di, xi, si){
   return null;
 }
 
-var restTimer=null, restLeft=0;
+var restTimer=null, restLeft=0, restKey=null;
+function fmtRest(sec){
+  var m=Math.floor(sec/60), s=sec%60;
+  return m+":"+(s<10?"0":"")+s;
+}
 function stopRest(){
-  clearInterval(restTimer); restTimer=null; restLeft=0;
-  var b=document.getElementById("rest"); if(b){ b.className=""; b.innerHTML=""; }
+  clearInterval(restTimer); restTimer=null; restLeft=0; restKey=null;
+  var n=document.getElementById("restrow"); if(n && n.parentNode) n.parentNode.removeChild(n);
 }
-function paintRest(){
-  var b=document.getElementById("rest"); if(!b) return;
-  if(restLeft<=0){ stopRest(); return; }
-  var m=Math.floor(restLeft/60), s=restLeft%60;
-  b.className="show";
-  b.innerHTML='<span class="rl">Отдых</span><b class="rt">'+m+":"+(s<10?"0":"")+s+'</b>';
-  var x=el("button","rx","Стоп"); x.onclick=stopRest; b.appendChild(x);
+function tickRest(){
+  restLeft--;
+  if(restLeft<=0){ stopRest(); render(); return; }
+  var t=document.getElementById("resttime");
+  if(t) t.textContent=fmtRest(restLeft); else render();
 }
-function startRest(sec){
-  clearInterval(restTimer); restLeft=sec; paintRest();
-  restTimer=setInterval(function(){ restLeft--; paintRest(); },1000);
+function startRest(sec, key){
+  clearInterval(restTimer); restLeft=sec; restKey=key;
+  restTimer=setInterval(tickRest,1000);
+}
+function restRow(){
+  var row=el("div","restrow");
+  row.id="restrow";
+  row.appendChild(el("span","rl","Отдых"));
+  var t=el("b","rt",fmtRest(restLeft)); t.id="resttime";
+  row.appendChild(t);
+  var x=el("button","rx","Пропустить");
+  x.onclick=function(){ stopRest(); render(); };
+  row.appendChild(x);
+  return row;
 }
 
 function renderApp(){
@@ -1321,11 +1330,12 @@ function renderTrain(main, prog){
         var ck=el("button","ck","✓");
         ck.onclick=function(){
           rec.done=!rec.done; S.log[k]=rec; save();
-          if(rec.done) startRest(x.type==="comp" ? 150 : 90); else stopRest();
+          if(rec.done) startRest(x.type==="comp" ? 150 : 90, k); else stopRest();
           render();
         };
         row.appendChild(ck);
         sets.appendChild(row);
+        if(restKey===k && restLeft>0) sets.appendChild(restRow());
       })(si);
     }
     card.appendChild(sets);
