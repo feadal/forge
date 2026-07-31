@@ -7,6 +7,8 @@ var S=null, mem=null;
 function load(){ try{var r=localStorage.getItem(KEY); if(r) return JSON.parse(r);}catch(e){} return null; }
 function save(){ try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){ mem=S; } }
 S = load() || mem || {step:"intro", profile:null, program:null, nutrition:null, log:{}, history:[], week:1, tab:"train", dayIdx:0};
+if(!S.restCfg) S.restCfg={comp:150,iso:90,warm:60};
+if(!S.restEx) S.restEx={};
 
 function $(id){ return document.getElementById(id); }
 function esc(s){ return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];}); }
@@ -259,6 +261,56 @@ function beep(){
     setTimeout(function(){ try{ctx.close();}catch(e){} }, 900);
   }catch(e){}
 }
+var pad={key:null, field:null, get:null, set:null, next:null};
+function padOpen(id, field, getV, setV, onNext){
+  pad={key:id, field:field, get:getV, set:setV, next:onNext};
+  render();
+  var el2=document.getElementById("padrow");
+  if(el2 && el2.scrollIntoView) try{ el2.scrollIntoView({block:"center",behavior:"smooth"}); }catch(e){}
+}
+function padClose(){ pad={key:null,field:null,get:null,set:null,next:null}; render(); }
+function padPress(ch){
+  if(!pad.get) return;
+  var v=String(pad.get()||"");
+  if(ch==="del") v=v.slice(0,-1);
+  else if(ch===".") { if(v.indexOf(".")<0) v=(v||"0")+"."; }
+  else v=(v==="0"?"":v)+ch;
+  pad.set(v);
+  var t=document.getElementById("padval");
+  if(t) t.textContent=v||"—";
+}
+function padNode(){
+  var box=el("div","padrow"); box.id="padrow";
+  var head=el("div","padhead");
+  head.appendChild(el("span","padlab", pad.field==="w"?"вес, кг":"повторы"));
+  var pv=el("b","padval", String(pad.get&&pad.get()||"—")); pv.id="padval";
+  head.appendChild(pv);
+  var x=el("button","padx","✕"); x.onclick=padClose; head.appendChild(x);
+  box.appendChild(head);
+  var grid=el("div","padgrid");
+  ["1","2","3","4","5","6","7","8","9",".","0","del"].forEach(function(ch){
+    var b=el("button","padk"+(ch==="del"?" wide":""), ch==="del"?"⌫":ch);
+    b.onclick=function(){ buzz(6); padPress(ch); };
+    grid.appendChild(b);
+  });
+  box.appendChild(grid);
+  var nx=el("button","padnext", pad.field==="w" ? "Дальше → повторы" : "Готово · засчитать подход");
+  nx.onclick=function(){ buzz(10); if(pad.next) pad.next(); };
+  box.appendChild(nx);
+  return box;
+}
+
+var REST_PRESETS=[0,30,45,60,90,120,150,180,240,300];
+function restFor(x, kind){
+  if(kind==="warm") return (S.restCfg&&S.restCfg.warm)||60;
+  if(S.restEx && S.restEx[x.id]!=null) return S.restEx[x.id];
+  return x.type==="comp" ? ((S.restCfg&&S.restCfg.comp)||150) : ((S.restCfg&&S.restCfg.iso)||90);
+}
+function fmtRestShort(sec){
+  if(!sec) return "без";
+  var m=Math.floor(sec/60), r=sec%60;
+  return m ? (m+":"+String(r).padStart(2,"0")) : (r+"с");
+}
 var SET_TAG={w:"Р",d:"Д",f:"О"};
 var SET_TAG_RU={w:"разминочный",d:"дроп-сет",f:"до отказа"};
 
@@ -494,7 +546,18 @@ function renderTrain(main, prog){
     card.style.animationDelay = (ci*45)+"ms";
     card.appendChild(el("h3",null, esc(x.name)));
     var n = setsForWeek(x.sets, S.week);
-    card.appendChild(el("div","cmeta","<b>"+n+" × "+esc(x.reps)+"</b> · RIR "+esc(x.rir)+" · "+esc(FORGE.MUSCLE_RU[x.muscle]||"")+" <em>+ разминка</em>"));
+    var meta=el("div","cmeta","<b>"+n+" × "+esc(x.reps)+"</b> · RIR "+esc(x.rir)+" · "+esc(FORGE.MUSCLE_RU[x.muscle]||"")+" <em>+ разминка</em>");
+    var rchip=el("button","rchip","⏱ "+fmtRestShort(restFor(x)));
+    rchip.onclick=function(){
+      var cur=restFor(x);
+      var i=REST_PRESETS.indexOf(cur);
+      if(i<0){ i=REST_PRESETS.reduce(function(best,v,idx){ return Math.abs(v-cur)<Math.abs(REST_PRESETS[best]-cur)?idx:best; },0); }
+      S.restEx[x.id]=REST_PRESETS[(i+1)%REST_PRESETS.length];
+      buzz(8); save(); render();
+      toast("Отдых: "+fmtRestShort(S.restEx[x.id]));
+    };
+    meta.appendChild(rchip);
+    card.appendChild(meta);
     if(x.cue) card.appendChild(el("p","cue", esc(x.cue)));
     var sets = el("div","sets");
 
@@ -502,7 +565,7 @@ function renderTrain(main, prog){
       var wkey = logKey(S.dayIdx, xi, "w0");
       var wrec = S.log[wkey] || {w:"",r:"",done:false,t:"w"};
       wrec.t="w";
-      var wrow = el("div","srow warm"+(wrec.done?" done":""));
+      var wrow = el("div","srow warm"+(wrec.done?" done":"")+(pad.key===wkey?" act":""));
       wrow.appendChild(el("span","snum tag","Р"));
 
       var wprev = S.log[(S.week-1)+"|"+S.dayIdx+"|"+xi+"|w0"];
@@ -520,15 +583,25 @@ function renderTrain(main, prog){
       var wghost = (!wrec.w && suggest);
       w1.value = wrec.w!=="" ? wrec.w : (wghost ? suggest : "");
       if(wghost) w1.className="ghost";
-      w1.onfocus=function(){ try{ w1.select(); }catch(e){} };
-      w1.oninput=function(){ wrec.w=w1.value; w1.className=""; S.log[wkey]=wrec; save(); };
+      w1.readOnly=true; w1.inputMode="none";
+      w1.onclick=function(){
+        padOpen(wkey,"w",function(){ return wrec.w; },
+          function(v){ wrec.w=v; S.log[wkey]=wrec; save(); },
+          function(){ padOpen(wkey,"r",function(){ return wrec.r; },
+            function(v){ wrec.r=v; S.log[wkey]=wrec; save(); },
+            function(){ padClose(); wck.onclick(); }); });
+      };
       wf1.appendChild(w1); wf1.appendChild(el("span","unit","кг")); wrow.appendChild(wf1);
 
       var wf2=el("div","fld"); var w2=el("input"); w2.type="text"; w2.inputMode="numeric";
       w2.value = wrec.r!=="" ? wrec.r : "";
       w2.placeholder = "8";
-      w2.onfocus=function(){ try{ w2.select(); }catch(e){} };
-      w2.oninput=function(){ wrec.r=w2.value; S.log[wkey]=wrec; save(); };
+      w2.readOnly=true; w2.inputMode="none";
+      w2.onclick=function(){
+        padOpen(wkey,"r",function(){ return wrec.r; },
+          function(v){ wrec.r=v; S.log[wkey]=wrec; save(); },
+          function(){ padClose(); wck.onclick(); });
+      };
       wf2.appendChild(w2); wf2.appendChild(el("span","unit","повт")); wrow.appendChild(wf2);
 
       pw.onclick=function(){
@@ -546,12 +619,14 @@ function renderTrain(main, prog){
         wrec.done=!wrec.done; S.log[wkey]=wrec;
         if(wrec.done){
           if(!S.sessionStart) S.sessionStart=Date.now();
-          buzz(14); startRest(60, wkey);
+          buzz(14);
+          var ws=restFor(x,"warm"); if(ws>0) startRest(ws, wkey); else stopRest();
         } else stopRest();
         save(); render();
       };
       wrow.appendChild(wck);
       sets.appendChild(wrow);
+      if(pad.key===wkey) sets.appendChild(padNode());
       if(restKey===wkey && restLeft>0) sets.appendChild(restRow());
     })();
 
@@ -559,7 +634,7 @@ function renderTrain(main, prog){
       (function(si){
         var k = logKey(S.dayIdx, xi, si);
         var rec = S.log[k] || {w:"",r:"",done:false};
-        var row = el("div","srow"+(rec.done?" done":"")+(rec.t?" t-"+rec.t:""));
+        var row = el("div","srow"+(rec.done?" done":"")+(rec.t?" t-"+rec.t:"")+(pad.key===k?" act":""));
         var sn = el("button","snum"+(rec.t?" tag":""), rec.t ? SET_TAG[rec.t] : String(si+1));
         sn.onclick=function(){
           var order=[null,"w","d","f"];
@@ -578,15 +653,25 @@ function renderTrain(main, prog){
         var f1=el("div","fld"); var i1=el("input"); i1.type="text"; i1.inputMode="decimal";
         i1.value = rec.w!=="" ? rec.w : (ghost ? String(prev.w) : "");
         if(ghost) i1.className="ghost";
-        i1.onfocus=function(){ try{ i1.select(); }catch(e){} };
-        i1.oninput=function(){ rec.w=i1.value; i1.className=""; S.log[k]=rec; save(); };
+        i1.readOnly=true; i1.inputMode="none";
+        i1.onclick=function(){
+          padOpen(k,"w",function(){ return rec.w; },
+            function(v){ rec.w=v; S.log[k]=rec; save(); },
+            function(){ padOpen(k,"r",function(){ return rec.r; },
+              function(v){ rec.r=v; S.log[k]=rec; save(); },
+              function(){ padClose(); ck.onclick(); }); });
+        };
         f1.appendChild(i1); f1.appendChild(el("span","unit","кг")); row.appendChild(f1);
 
         var f2=el("div","fld"); var i2=el("input"); i2.type="text"; i2.inputMode="numeric";
         i2.value = rec.r!=="" ? rec.r : (ghost ? String(prev.r) : "");
         if(ghost) i2.className="ghost";
-        i2.onfocus=function(){ try{ i2.select(); }catch(e){} };
-        i2.oninput=function(){ rec.r=i2.value; i2.className=""; S.log[k]=rec; save(); };
+        i2.readOnly=true; i2.inputMode="none";
+        i2.onclick=function(){
+          padOpen(k,"r",function(){ return rec.r; },
+            function(v){ rec.r=v; S.log[k]=rec; save(); },
+            function(){ padClose(); ck.onclick(); });
+        };
         f2.appendChild(i2); f2.appendChild(el("span","unit","повт")); row.appendChild(f2);
 
         pv.onclick=function(){
@@ -604,12 +689,14 @@ function renderTrain(main, prog){
           rec.done=!rec.done; S.log[k]=rec;
           if(rec.done){
             if(!S.sessionStart) S.sessionStart=Date.now();
-            buzz(14); startRest(x.type==="comp" ? 150 : 90, k);
+            buzz(14);
+            var rs=restFor(x); if(rs>0) startRest(rs, k); else stopRest();
           } else stopRest();
           save(); render();
         };
         row.appendChild(ck);
         sets.appendChild(row);
+        if(pad.key===k) sets.appendChild(padNode());
         if(restKey===k && restLeft>0) sets.appendChild(restRow());
       })(si);
     }
@@ -778,6 +865,90 @@ function renderFood(main, nut){
   main.appendChild(reroll);
 }
 
+function exBestByWeek(dayIdx, xi){
+  var out=[];
+  for(var w=1; w<=8; w++){
+    var best=0;
+    for(var si=0; si<8; si++){
+      var r=S.log[w+"|"+dayIdx+"|"+xi+"|"+si];
+      if(!r || r.t==="w") continue;
+      var ww=parseFloat(String(r.w).replace(",","."))||0, rr=parseFloat(r.r)||0;
+      if(ww>0 && rr>0 && rr<=12){ var e=e1rm(ww,rr); if(e>best) best=e; }
+    }
+    out.push(best?Math.round(best):null);
+  }
+  return out;
+}
+
+function chartSVG(vals){
+  var W=300,H=118,pad=10,bt=12,bb=18;
+  var pts=[], best=0, stair=[];
+  vals.forEach(function(v,i){
+    if(v!=null){ pts.push([i,v]); if(v>best) best=v; }
+    stair.push(best||null);
+  });
+  if(pts.length<1) return "";
+  var all=pts.map(function(p){return p[1];});
+  var mn=Math.min.apply(null,all), mx=Math.max.apply(null,all);
+  if(mx-mn<4){ mn=Math.max(0,mn-3); mx=mx+3; }
+  var x=function(i){ return pad+(W-2*pad)*(i/7); };
+  var y=function(v){ return bt+(H-bt-bb)*(1-(v-mn)/(mx-mn)); };
+  var out='<svg class="chart" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none">';
+  out+='<line x1="'+pad+'" y1="'+(H-bb)+'" x2="'+(W-pad)+'" y2="'+(H-bb)+'" class="cax"/>';
+  var sp=[], last=null;
+  stair.forEach(function(v,i){
+    if(v==null) return;
+    if(last!=null) sp.push(x(i)+","+y(last));
+    sp.push(x(i)+","+y(v)); last=v;
+  });
+  if(sp.length>1) out+='<polyline class="cstair" points="'+sp.join(" ")+'"/>';
+  out+='<polyline class="cline" points="'+pts.map(function(p){return x(p[0])+","+y(p[1]);}).join(" ")+'"/>';
+  var run=0;
+  pts.forEach(function(p){
+    var isPR = p[1]>run; if(isPR) run=p[1];
+    out+='<circle class="'+(isPR?"cpr":"cdot")+'" cx="'+x(p[0]).toFixed(1)+'" cy="'+y(p[1]).toFixed(1)+'" r="'+(isPR?4:2.6)+'"/>';
+  });
+  out+='<text class="clab" x="'+pad+'" y="10">'+Math.round(mx)+' кг</text>';
+  out+='<text class="clab" x="'+pad+'" y="'+(H-4)+'">'+Math.round(mn)+' кг</text>';
+  out+='</svg>';
+  return out;
+}
+
+function renderChart(main){
+  var prog=S.program;
+  var list=[];
+  prog.days.forEach(function(d,di){
+    d.exercises.forEach(function(x,xi){ list.push({label:d.name+" · "+x.name, di:di, xi:xi, id:d.name+"|"+xi}); });
+  });
+  if(!list.length) return;
+  if(!S.chartEx || !list.some(function(o){return o.id===S.chartEx;})) S.chartEx=list[0].id;
+  var cur=list.filter(function(o){return o.id===S.chartEx;})[0]||list[0];
+
+  var c=el("div","card");
+  c.appendChild(el("h3",null,"Динамика максимума"));
+  var sel=el("select","tsel");
+  sel.innerHTML=list.map(function(o){ return '<option value="'+esc(o.id)+'"'+(o.id===S.chartEx?" selected":"")+'>'+esc(o.label)+'</option>'; }).join("");
+  sel.onchange=function(){ S.chartEx=sel.value; save(); render(); };
+  c.appendChild(sel);
+
+  var vals=exBestByWeek(cur.di, cur.xi);
+  var have=vals.filter(function(v){return v!=null;});
+  if(!have.length){
+    c.appendChild(el("p","hint","Пока нет записей по этому упражнению. Появятся после первой залогированной тренировки."));
+  } else {
+    c.appendChild(el("div","chartbox", chartSVG(vals)));
+    var first=have[0], last=have[have.length-1], top=Math.max.apply(null,have);
+    var st=el("div","cstats");
+    [[top,"рекорд"],[last,"сейчас"],[(last-first>=0?"+":"")+(last-first),"с начала"]].forEach(function(p){
+      var b=el("div","cstat"); b.appendChild(el("b",null,String(p[0]))); b.appendChild(el("span",null,p[1]));
+      st.appendChild(b);
+    });
+    c.appendChild(st);
+    c.appendChild(el("p","hint small","Расчётный максимум по формуле Эпли. Ступенька — твой рекорд на тот момент; точка на ней означает, что ты его побил."));
+  }
+  main.appendChild(c);
+}
+
 function renderProfile(main){
   var p=S.profile, prog=S.program;
   var c=el("div","card");
@@ -819,6 +990,39 @@ function renderProfile(main){
     });
     main.appendChild(lc);
   }
+
+  renderChart(main);
+
+  var rc=el("div","card");
+  rc.appendChild(el("h3",null,"Отдых между подходами"));
+  rc.appendChild(el("p","hint","Базовые значения. Для отдельного упражнения можно задать своё — тапни ⏱ на его карточке."));
+  [["comp","Базовые"],["iso","Изоляция"],["warm","Разминка"]].forEach(function(pair){
+    var row=el("div","rrow");
+    row.appendChild(el("span",null,pair[1]));
+    var ctl=el("div","rctl");
+    var minus=el("button","rbtn","−");
+    var val=el("b",null,fmtRestShort(S.restCfg[pair[0]]));
+    var plus=el("button","rbtn","+");
+    minus.onclick=function(){
+      var i=REST_PRESETS.indexOf(S.restCfg[pair[0]]);
+      if(i<0) i=1;
+      S.restCfg[pair[0]]=REST_PRESETS[Math.max(0,i-1)]; buzz(8); save(); render();
+    };
+    plus.onclick=function(){
+      var i=REST_PRESETS.indexOf(S.restCfg[pair[0]]);
+      if(i<0) i=1;
+      S.restCfg[pair[0]]=REST_PRESETS[Math.min(REST_PRESETS.length-1,i+1)]; buzz(8); save(); render();
+    };
+    ctl.appendChild(minus); ctl.appendChild(val); ctl.appendChild(plus);
+    row.appendChild(ctl);
+    rc.appendChild(row);
+  });
+  if(Object.keys(S.restEx||{}).length){
+    var clr=el("button","ghost-btn","Сбросить отдельные настройки ("+Object.keys(S.restEx).length+")");
+    clr.onclick=function(){ S.restEx={}; save(); render(); toast("Сброшено"); };
+    rc.appendChild(clr);
+  }
+  main.appendChild(rc);
 
   var n=el("div","card");
   n.appendChild(el("h3",null,"Прогрессия"));
