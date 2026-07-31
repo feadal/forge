@@ -225,6 +225,32 @@ function exercisesForWeek(list, w){
 
 function logKey(di, xi, si){ return S.week+"|"+di+"|"+xi+"|"+si; }
 
+function lastLogged(di, xi, si){
+  for(var w=S.week-1; w>=1; w--){
+    var r=S.log[w+"|"+di+"|"+xi+"|"+si];
+    if(r && r.w) return r;
+  }
+  return null;
+}
+
+var restTimer=null, restLeft=0;
+function stopRest(){
+  clearInterval(restTimer); restTimer=null; restLeft=0;
+  var b=document.getElementById("rest"); if(b){ b.className=""; b.innerHTML=""; }
+}
+function paintRest(){
+  var b=document.getElementById("rest"); if(!b) return;
+  if(restLeft<=0){ stopRest(); return; }
+  var m=Math.floor(restLeft/60), s=restLeft%60;
+  b.className="show";
+  b.innerHTML='<span class="rl">Отдых</span><b class="rt">'+m+":"+(s<10?"0":"")+s+'</b>';
+  var x=el("button","rx","Стоп"); x.onclick=stopRest; b.appendChild(x);
+}
+function startRest(sec){
+  clearInterval(restTimer); restLeft=sec; paintRest();
+  restTimer=setInterval(function(){ restLeft--; paintRest(); },1000);
+}
+
 function renderApp(){
   var root=$("app"); root.innerHTML="";
   var prog=S.program, nut=S.nutrition;
@@ -321,14 +347,21 @@ function renderTrain(main, prog){
         var rec = S.log[k] || {w:"",r:"",done:false};
         var row = el("div","srow"+(rec.done?" done":""));
         row.appendChild(el("span","snum", String(si+1)));
-        var f1=el("div","fld"); var i1=el("input"); i1.type="text"; i1.inputMode="decimal"; i1.value=rec.w; i1.placeholder="";
+        var prev = lastLogged(S.dayIdx, xi, si);
+        var f1=el("div","fld"); var i1=el("input"); i1.type="text"; i1.inputMode="decimal"; i1.value=rec.w;
+        i1.placeholder = prev ? String(prev.w) : "";
         i1.oninput=function(){ rec.w=i1.value; S.log[k]=rec; save(); };
         f1.appendChild(i1); f1.appendChild(el("span","unit","кг")); row.appendChild(f1);
         var f2=el("div","fld"); var i2=el("input"); i2.type="text"; i2.inputMode="numeric"; i2.value=rec.r;
+        i2.placeholder = prev ? String(prev.r) : "";
         i2.oninput=function(){ rec.r=i2.value; S.log[k]=rec; save(); };
         f2.appendChild(i2); f2.appendChild(el("span","unit","повт")); row.appendChild(f2);
         var ck=el("button","ck","✓");
-        ck.onclick=function(){ rec.done=!rec.done; S.log[k]=rec; save(); render(); };
+        ck.onclick=function(){
+          rec.done=!rec.done; S.log[k]=rec; save();
+          if(rec.done) startRest(x.type==="comp" ? 150 : 90); else stopRest();
+          render();
+        };
         row.appendChild(ck);
         sets.appendChild(row);
       })(si);

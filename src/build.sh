@@ -8,6 +8,7 @@ OUT="$D/app-body.html"
   echo '</style>'
   echo '<div id="app"></div>'
   echo '<div id="toast"></div>'
+  echo '<div id="rest"></div>'
   echo '<script>'
   echo 'var FORGE=(function(){'
   grep -v '^if(typeof module' "$D/engine.js"

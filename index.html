@@ -58,7 +58,7 @@
 body{margin:0;background:var(--bg);color:var(--text);line-height:1.5;
   font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,"Segoe UI",Roboto,sans-serif;
   -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
-#app{max-width:520px;margin:0 auto;padding:20px 18px 56px}
+#app{max-width:520px;margin:0 auto;padding:14px 18px 96px}
 h1,h2,h3,h4{margin:0;color:var(--strong);letter-spacing:-.022em;line-height:1.22}
 button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
 input{font-family:ui-monospace,"SF Mono",Menlo,monospace}
@@ -119,25 +119,25 @@ input{font-family:ui-monospace,"SF Mono",Menlo,monospace}
   padding:11px 16px;color:var(--text);font-size:.87rem;font-weight:550;transition:all .15s}
 .chip.on{border-color:var(--accent);background:var(--accent-glow);color:var(--accent)}
 
-.topbar{margin-bottom:16px}
-.brand{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:14px}
+.topbar{margin-bottom:13px}
+.brand{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:10px}
 .brand b{font-size:1.5rem;font-weight:800;letter-spacing:-.045em;color:var(--accent)}
 .brand span{font-size:.75rem;color:var(--muted);text-align:right;line-height:1.35;max-width:62%}
 .weekbar{display:flex;align-items:center;gap:8px;background:var(--surface);
-  border:1px solid var(--line);border-radius:var(--radius);padding:6px}
-.stp{width:40px;height:40px;border-radius:var(--r-sm);background:var(--elev);color:var(--text);
+  border:1px solid var(--line);border-radius:var(--radius);padding:5px}
+.stp{width:38px;height:38px;border-radius:var(--r-sm);background:var(--elev);color:var(--text);
   font-size:.85rem;transition:background .15s}
 .stp:active{background:var(--raise)}
 .wkmid{flex:1;text-align:center}
 .wkmid b{display:block;font-size:.95rem;font-weight:650;color:var(--strong)}
 .wkmid i{font-style:normal;font-size:.75rem;color:var(--accent);font-weight:600}
 
-.tabs{display:flex;gap:4px;margin:0 0 18px;background:var(--elev);padding:4px;border-radius:var(--radius)}
+.tabs{display:flex;gap:4px;margin:0 0 13px;background:var(--elev);padding:4px;border-radius:var(--radius)}
 .tab{flex:1;padding:11px 4px;color:var(--muted);font-size:.86rem;font-weight:600;
   border-radius:var(--r-sm);transition:all .18s;letter-spacing:-.01em}
 .tab.on{background:var(--surface);color:var(--strong);box-shadow:0 1px 3px rgba(0,0,0,.25)}
 
-.daynav{display:flex;gap:8px;overflow-x:auto;padding:2px 0 6px;margin-bottom:14px;
+.daynav{display:flex;gap:8px;overflow-x:auto;padding:2px 0 4px;margin-bottom:11px;
   scrollbar-width:none;-ms-overflow-style:none}
 .daynav::-webkit-scrollbar{display:none}
 .dbtn{flex:0 0 auto;padding:10px 15px;border-radius:99px;border:1px solid var(--line);
@@ -145,7 +145,7 @@ input{font-family:ui-monospace,"SF Mono",Menlo,monospace}
   transition:all .15s}
 .dbtn.on{border-color:transparent;color:var(--on-accent);background:var(--accent)}
 
-.progwrap{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.progwrap{display:flex;align-items:center;gap:12px;margin-bottom:13px}
 .progbar{flex:1;height:6px;background:var(--elev);border-radius:99px;overflow:hidden}
 .progbar span{display:block;height:100%;border-radius:99px;
   background:linear-gradient(90deg,var(--accent-dim),var(--accent));transition:width .3s ease}
@@ -157,7 +157,7 @@ input{font-family:ui-monospace,"SF Mono",Menlo,monospace}
 .card h3 small{font-weight:500;color:var(--muted);font-size:.77rem;margin-left:6px;letter-spacing:0}
 .cmeta{font-size:.79rem;color:var(--muted);margin-top:5px;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
 .cmeta b{color:var(--accent);font-weight:700;font-variant-numeric:tabular-nums}
-.cue{font-size:.8rem;color:var(--muted);margin:11px 0 12px;padding:9px 11px;
+.cue{font-size:.8rem;color:var(--muted);margin:10px 0 11px;padding:8px 11px;
   background:var(--elev);border-radius:var(--r-sm);line-height:1.45;border-left:2px solid var(--line)}
 
 .sets{display:flex;flex-direction:column;gap:8px}
@@ -171,7 +171,8 @@ input{font-family:ui-monospace,"SF Mono",Menlo,monospace}
   border-radius:var(--r-sm);color:var(--text);font-size:16px;font-weight:650;text-align:center;
   padding:0 32px 0 8px;outline:none;font-variant-numeric:tabular-nums;transition:all .15s}
 .fld input:focus{border-color:var(--accent);background:var(--surface)}
-.unit{position:absolute;right:10px;font-size:.68rem;color:var(--faint);pointer-events:none;font-weight:500}
+.unit{position:absolute;right:10px;font-size:.72rem;color:var(--muted);pointer-events:none;font-weight:500}
+.fld input::placeholder{color:var(--faint);font-weight:500;opacity:1}
 .ck{width:48px;height:48px;border-radius:var(--r-sm);border:1.5px solid var(--line);
   background:transparent;color:transparent;font-size:1.1rem;font-weight:800;transition:all .18s}
 .srow.done .ck{background:var(--good);border-color:var(--good);color:#06210f}
@@ -213,6 +214,19 @@ input{font-family:ui-monospace,"SF Mono",Menlo,monospace}
 .hrow{font-size:.84rem;color:var(--text);padding:10px 0;border-bottom:1px solid var(--line-soft)}
 .hrow:last-child{border-bottom:none}
 
+#rest{position:fixed;left:0;right:0;bottom:0;z-index:60;display:none;
+  align-items:center;justify-content:center;gap:14px;
+  padding:14px 18px calc(14px + env(safe-area-inset-bottom));
+  background:var(--surface);border-top:1px solid var(--line);
+  box-shadow:0 -8px 28px -14px rgba(0,0,0,.8)}
+#rest.show{display:flex}
+#rest .rl{font-size:.8rem;color:var(--muted);font-weight:600}
+#rest .rt{font-size:1.7rem;font-weight:750;color:var(--accent);
+  font-family:ui-monospace,"SF Mono",Menlo,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+#rest .rx{padding:9px 15px;border-radius:99px;background:var(--elev);color:var(--muted);
+  font-size:.82rem;font-weight:600}
+#rest .rx:active{background:var(--raise)}
+
 #toast{position:fixed;left:50%;bottom:30px;transform:translateX(-50%) translateY(16px);
   background:var(--strong);color:var(--bg);font-size:.86rem;font-weight:650;padding:12px 20px;
   border-radius:99px;opacity:0;pointer-events:none;transition:opacity .22s,transform .22s;z-index:50;
@@ -224,6 +238,7 @@ input{font-family:ui-monospace,"SF Mono",Menlo,monospace}
 </style>
 <div id="app"></div>
 <div id="toast"></div>
+<div id="rest"></div>
 <script>
 var FORGE=(function(){
 "use strict";
@@ -1172,6 +1187,32 @@ function exercisesForWeek(list, w){
 
 function logKey(di, xi, si){ return S.week+"|"+di+"|"+xi+"|"+si; }
 
+function lastLogged(di, xi, si){
+  for(var w=S.week-1; w>=1; w--){
+    var r=S.log[w+"|"+di+"|"+xi+"|"+si];
+    if(r && r.w) return r;
+  }
+  return null;
+}
+
+var restTimer=null, restLeft=0;
+function stopRest(){
+  clearInterval(restTimer); restTimer=null; restLeft=0;
+  var b=document.getElementById("rest"); if(b){ b.className=""; b.innerHTML=""; }
+}
+function paintRest(){
+  var b=document.getElementById("rest"); if(!b) return;
+  if(restLeft<=0){ stopRest(); return; }
+  var m=Math.floor(restLeft/60), s=restLeft%60;
+  b.className="show";
+  b.innerHTML='<span class="rl">Отдых</span><b class="rt">'+m+":"+(s<10?"0":"")+s+'</b>';
+  var x=el("button","rx","Стоп"); x.onclick=stopRest; b.appendChild(x);
+}
+function startRest(sec){
+  clearInterval(restTimer); restLeft=sec; paintRest();
+  restTimer=setInterval(function(){ restLeft--; paintRest(); },1000);
+}
+
 function renderApp(){
   var root=$("app"); root.innerHTML="";
   var prog=S.program, nut=S.nutrition;
@@ -1268,14 +1309,21 @@ function renderTrain(main, prog){
         var rec = S.log[k] || {w:"",r:"",done:false};
         var row = el("div","srow"+(rec.done?" done":""));
         row.appendChild(el("span","snum", String(si+1)));
-        var f1=el("div","fld"); var i1=el("input"); i1.type="text"; i1.inputMode="decimal"; i1.value=rec.w; i1.placeholder="";
+        var prev = lastLogged(S.dayIdx, xi, si);
+        var f1=el("div","fld"); var i1=el("input"); i1.type="text"; i1.inputMode="decimal"; i1.value=rec.w;
+        i1.placeholder = prev ? String(prev.w) : "";
         i1.oninput=function(){ rec.w=i1.value; S.log[k]=rec; save(); };
         f1.appendChild(i1); f1.appendChild(el("span","unit","кг")); row.appendChild(f1);
         var f2=el("div","fld"); var i2=el("input"); i2.type="text"; i2.inputMode="numeric"; i2.value=rec.r;
+        i2.placeholder = prev ? String(prev.r) : "";
         i2.oninput=function(){ rec.r=i2.value; S.log[k]=rec; save(); };
         f2.appendChild(i2); f2.appendChild(el("span","unit","повт")); row.appendChild(f2);
         var ck=el("button","ck","✓");
-        ck.onclick=function(){ rec.done=!rec.done; S.log[k]=rec; save(); render(); };
+        ck.onclick=function(){
+          rec.done=!rec.done; S.log[k]=rec; save();
+          if(rec.done) startRest(x.type==="comp" ? 150 : 90); else stopRest();
+          render();
+        };
         row.appendChild(ck);
         sets.appendChild(row);
       })(si);
