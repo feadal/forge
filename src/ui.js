@@ -30,18 +30,29 @@ var Q = [
     {v:45,l:"45 минут"},{v:60,l:"60 минут"},{v:75,l:"75 минут"},{v:90,l:"90 минут"}]},
   {id:"legs", q:"Тренируешь ноги?", type:"pick", opts:[
     {v:true,l:"Да",d:"полноценная программа"},{v:false,l:"Нет",d:"только верх тела"}]},
-  {id:"split", q:"Как разбить тренировки?", sub:"Можно довериться автовыбору — подберу под твои дни", type:"pick", optsFn:function(d){
-    var L={bro_ant:{l:"Сплит: грудь+бицепс",d:"и спина+трицепс — по антагонистам"},
-           bro_syn:{l:"Сплит: грудь+трицепс",d:"и спина+бицепс — по синергистам"},
-           full:{l:"Фулбади",d:"всё тело каждую тренировку"},
-           ul:{l:"Верх / Низ",d:"чередуешь верх и низ тела"},
-           ppl:{l:"Пуш / Пул / Ноги",d:"жимовые, тяговые, ноги"},
-           upper:{l:"Только верх",d:"ноги не тренируем"}};
-    var out=[{v:"auto",l:"Автоматически",d:"подберу лучший под "+(d.days||3)+" дн/нед"}];
-    (FORGE.splitOptionsFor(d.days||3, d.legs!==false)||[]).forEach(function(k){
-      if(k==="auto"||!L[k]) return;
-      out.push({v:k,l:L[k].l,d:L[k].d});
-    });
+  {id:"system", q:"Как ты тренируешься?", sub:"Главный выбор — остальное подстрою под него", type:"pick", optsFn:function(d){
+    var days=d.days||3, legs=d.legs!==false;
+    var av=FORGE.splitOptionsFor(days, legs)||[];
+    var out=[];
+    if(av.indexOf("bro_ant")>=0 || av.indexOf("ppl")>=0)
+      out.push({v:"split",l:"Сплит",d:"каждая тренировка — свои группы мышц"});
+    if(av.indexOf("full")>=0)
+      out.push({v:"full",l:"Фулбади",d:"всё тело за одну тренировку"});
+    if(av.indexOf("ul")>=0)
+      out.push({v:"ul",l:"Верх / Низ",d:"чередуешь верх и низ тела"});
+    if(av.indexOf("upper")>=0)
+      out.push({v:"upper",l:"Только верх",d:"ноги не тренируем"});
+    out.push({v:"auto",l:"Не знаю — реши сам",d:"подберу лучший под "+days+" дн/нед"});
+    return out;
+  }},
+  {id:"splitKind", q:"Какой у тебя сплит?", sub:"Как совмещаешь группы в один день", type:"pick",
+   skipIf:function(d){ return d.system!=="split"; },
+   optsFn:function(d){
+    var av=FORGE.splitOptionsFor(d.days||3, d.legs!==false)||[];
+    var out=[];
+    if(av.indexOf("bro_ant")>=0) out.push({v:"bro_ant",l:"Грудь + бицепс",d:"спина + трицепс, ноги отдельно — по антагонистам"});
+    if(av.indexOf("bro_syn")>=0) out.push({v:"bro_syn",l:"Грудь + трицепс",d:"спина + бицепс — классический вариант"});
+    if(av.indexOf("ppl")>=0)     out.push({v:"ppl",l:"Пуш / Пул / Ноги",d:"жимовые, тяговые и ноги по дням"});
     return out;
   }},
   {id:"limits", q:"Есть проблемы с суставами или спиной?", sub:"Программа обойдёт опасные упражнения и предложит замены", type:"multi", optional:true, opts:[
@@ -89,8 +100,9 @@ function renderWizard(){
   var root = $("app"); root.innerHTML="";
   var q = Q[qi];
   var head = el("div","wz-head");
-  head.appendChild(el("div","wz-prog","<span style=\"width:"+Math.round((qi)/Q.length*100)+"%\"></span>"));
-  head.appendChild(el("div","wz-count", (qi+1)+" из "+Q.length));
+  var si = stepInfo();
+  head.appendChild(el("div","wz-prog","<span style=\"width:"+Math.round(si.pos/si.total*100)+"%\"></span>"));
+  head.appendChild(el("div","wz-count", (si.pos+1)+" из "+si.total));
   root.appendChild(head);
   root.appendChild(el("h2","wz-q", esc(q.q)));
   if(q.sub) root.appendChild(el("p","wz-sub", esc(q.sub)));
@@ -139,14 +151,26 @@ function renderWizard(){
   root.appendChild(box);
   if(qi>0){
     var back = el("button","ghost-btn","← Назад");
-    back.onclick=function(){ qi--; render(); };
+    back.onclick=function(){ var p=advance(-1); qi = p<0?0:p; render(); };
     root.appendChild(back);
   }
 }
 
+function visibleQs(){ return Q.filter(function(q){ return !q.skipIf || !q.skipIf(draft); }); }
+function stepInfo(){
+  var vis = visibleQs(), cur = Q[qi];
+  var pos = vis.indexOf(cur);
+  return {pos: pos<0?0:pos, total: vis.length};
+}
+function advance(dir){
+  var i = qi + dir;
+  while(i >= 0 && i < Q.length && Q[i].skipIf && Q[i].skipIf(draft)) i += dir;
+  return i;
+}
+
 function next(){
   var justAnswered = Q[qi];
-  qi++;
+  qi = advance(1);
   if(justAnswered && justAnswered.id==="goal" && draft.nutgoal==null){
     if(draft.goal==="cut") draft.nutgoal="cut";
     else if(draft.goal==="hyp") draft.nutgoal="recomp";
@@ -155,13 +179,21 @@ function next(){
   render();
 }
 
+function resolveSplit(d){
+  if(d.system==="split") return d.splitKind || "bro_ant";
+  if(d.system==="full") return "full";
+  if(d.system==="ul") return "ul";
+  if(d.system==="upper") return "upper";
+  return "auto";
+}
+
 function finish(){
   var p = {
     sex:draft.sex, age:draft.age, height:draft.height, weight:draft.weight,
     level:draft.level, goal:draft.goal, days:draft.days, minutes:draft.minutes,
     legs:draft.legs, emphasis:draft.emphasis||[], equipment:(draft.equipment&&draft.equipment.length?draft.equipment:["bb","db","cable","machine","bw"]),
     activity:draft.activity, nutgoal:draft.nutgoal, meals:draft.meals, restrictions:draft.restrictions||[],
-    limits:draft.limits||[], redflags:draft.redflags||[], split:draft.split||"auto"
+    limits:draft.limits||[], redflags:draft.redflags||[], split:resolveSplit(draft)
   };
   S.profile = p;
   S.program = FORGE.generateProgram({level:p.level,days:p.days,minutes:p.minutes,goal:p.goal,legs:p.legs,emphasis:p.emphasis,equipment:p.equipment,limits:p.limits,split:p.split});
