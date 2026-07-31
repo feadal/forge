@@ -233,7 +233,17 @@ function lastLogged(di, xi, si){
   return null;
 }
 
-var restTimer=null, restLeft=0, restKey=null;
+var restTimer=null, restLeft=0, restKey=null, restTotal=150;
+function ringSVG(pct, size, stroke, cls){
+  pct = Math.max(0, Math.min(1, pct||0));
+  var r=(size-stroke)/2, c=2*Math.PI*r, off=c*(1-pct);
+  return '<svg class="ring '+(cls||"")+'" width="'+size+'" height="'+size+'" viewBox="0 0 '+size+' '+size+'">'
+    +'<circle class="rbg" cx="'+(size/2)+'" cy="'+(size/2)+'" r="'+r.toFixed(1)+'" stroke-width="'+stroke+'" fill="none"/>'
+    +'<circle class="rfg" cx="'+(size/2)+'" cy="'+(size/2)+'" r="'+r.toFixed(1)+'" stroke-width="'+stroke
+    +'" fill="none" stroke-linecap="round" stroke-dasharray="'+c.toFixed(1)+'" stroke-dashoffset="'+off.toFixed(1)+'"/></svg>';
+}
+function buzz(ms){ try{ if(navigator.vibrate) navigator.vibrate(ms||12); }catch(e){} }
+
 function fmtRest(sec){
   var m=Math.floor(sec/60), s=sec%60;
   return m+":"+(s<10?"0":"")+s;
@@ -244,20 +254,28 @@ function stopRest(){
 }
 function tickRest(){
   restLeft--;
-  if(restLeft<=0){ stopRest(); render(); return; }
+  if(restLeft<=0){ buzz([18,60,18]); stopRest(); render(); return; }
   var t=document.getElementById("resttime");
-  if(t) t.textContent=fmtRest(restLeft); else render();
+  if(!t){ render(); return; }
+  t.textContent=fmtRest(restLeft);
+  var rg=document.getElementById("restring");
+  if(rg) rg.innerHTML=ringSVG(restLeft/restTotal, 40, 4, "accent");
 }
 function startRest(sec, key){
-  clearInterval(restTimer); restLeft=sec; restKey=key;
+  clearInterval(restTimer); restLeft=sec; restTotal=sec; restKey=key;
   restTimer=setInterval(tickRest,1000);
 }
 function restRow(){
   var row=el("div","restrow");
   row.id="restrow";
-  row.appendChild(el("span","rl","Отдых"));
+  var ring=el("div","rring", ringSVG(restLeft/restTotal, 40, 4, "accent"));
+  ring.id="restring";
+  row.appendChild(ring);
+  var mid=el("div","rmid");
+  mid.appendChild(el("span","rl","Отдых"));
   var t=el("b","rt",fmtRest(restLeft)); t.id="resttime";
-  row.appendChild(t);
+  mid.appendChild(t);
+  row.appendChild(mid);
   var x=el("button","rx","Пропустить");
   x.onclick=function(){ stopRest(); render(); };
   row.appendChild(x);
@@ -337,18 +355,37 @@ function renderTrain(main, prog){
     totalSets += n;
     for(var si=0; si<n; si++){ if(S.log[logKey(S.dayIdx,p.i,si)] && S.log[logKey(S.dayIdx,p.i,si)].done) doneSets++; }
   });
-  var bar = el("div","progbar","<span style=\"width:"+(totalSets?Math.round(doneSets/totalSets*100):0)+"%\"></span>");
-  var pw = el("div","progwrap"); pw.appendChild(bar);
-  pw.appendChild(el("span","progtxt", doneSets+"/"+totalSets+" подх."));
-  main.appendChild(pw);
+  var pct = totalSets ? doneSets/totalSets : 0;
+  var hero = el("div","hero"+(doneSets&&doneSets===totalSets?" full":""));
+  hero.appendChild(el("div","hring", ringSVG(pct, 62, 5)));
+  var hm = el("div","hmid");
+  hm.appendChild(el("div","hnum","<b>"+doneSets+"</b><i>/"+totalSets+"</i>"));
+  hm.appendChild(el("div","hlab", doneSets===totalSets&&totalSets ? "тренировка закрыта" : "подходов сделано"));
+  hero.appendChild(hm);
+  var vol=0;
+  plan.forEach(function(p){
+    var nn=setsForWeek(p.x.sets,S.week);
+    for(var q=0;q<nn;q++){
+      var rr=S.log[logKey(S.dayIdx,p.i,q)];
+      if(rr){ var w=parseFloat(String(rr.w).replace(",","."))||0, rp=parseFloat(rr.r)||0; vol+=w*rp; }
+    }
+  });
+  if(vol>0){
+    var hv=el("div","hvol");
+    hv.appendChild(el("b",null, Math.round(vol).toLocaleString("ru-RU")));
+    hv.appendChild(el("span",null,"кг тоннаж"));
+    hero.appendChild(hv);
+  }
+  main.appendChild(hero);
 
   if(plan.length < day.exercises.length){
     main.appendChild(el("div","warn", (S.week===7?"Делоад":"Вкатывание")+": сокращённый объём — "+plan.length+" из "+day.exercises.length+" упражнений. С 3-й недели программа раскрывается полностью."));
   }
 
-  plan.forEach(function(pair){
+  plan.forEach(function(pair, ci){
     var x = pair.x, xi = pair.i;
-    var card = el("div","card");
+    var card = el("div","card in");
+    card.style.animationDelay = (ci*45)+"ms";
     card.appendChild(el("h3",null, esc(x.name)));
     var n = setsForWeek(x.sets, S.week);
     card.appendChild(el("div","cmeta","<b>"+n+" × "+esc(x.reps)+"</b> · RIR "+esc(x.rir)+" · "+esc(FORGE.MUSCLE_RU[x.muscle]||"")));
@@ -372,7 +409,7 @@ function renderTrain(main, prog){
         var ck=el("button","ck","✓");
         ck.onclick=function(){
           rec.done=!rec.done; S.log[k]=rec; save();
-          if(rec.done) startRest(x.type==="comp" ? 150 : 90, k); else stopRest();
+          if(rec.done){ buzz(14); startRest(x.type==="comp" ? 150 : 90, k); } else stopRest();
           render();
         };
         row.appendChild(ck);
@@ -485,9 +522,16 @@ function renderProfile(main){
 
   var v=el("div","card");
   v.appendChild(el("h3",null,"Недельный объём"));
-  var vv=el("div","prows");
-  Object.keys(prog.weeklyVolume).forEach(function(k){
-    if(prog.weeklyVolume[k]>0) vv.appendChild(el("div","prow","<span>"+esc(FORGE.MUSCLE_RU[k])+"</span><b>"+prog.weeklyVolume[k]+" подх.</b>"));
+  var vv=el("div",null);
+  var keys=Object.keys(prog.weeklyVolume).filter(function(k){ return prog.weeklyVolume[k]>0; });
+  var mx=0; keys.forEach(function(k){ if(prog.weeklyVolume[k]>mx) mx=prog.weeklyVolume[k]; });
+  keys.sort(function(a,b){ return prog.weeklyVolume[b]-prog.weeklyVolume[a]; });
+  keys.forEach(function(k){
+    var val=prog.weeklyVolume[k];
+    var r=el("div","vrow");
+    r.appendChild(el("div","vtop","<span>"+esc(FORGE.MUSCLE_RU[k])+"</span><b>"+val+"</b>"));
+    r.appendChild(el("div","vbar",'<i style="width:'+Math.round(val/mx*100)+'%"></i>'));
+    vv.appendChild(r);
   });
   v.appendChild(vv);
   main.appendChild(v);

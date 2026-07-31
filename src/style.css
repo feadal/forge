@@ -103,6 +103,29 @@ input{font-family:-apple-system,system-ui,sans-serif}
 .progbar span{display:block;height:100%;border-radius:99px;background:var(--ink);transition:width .3s ease}
 .progtxt{font-size:.8rem;color:var(--muted);font-weight:600;font-variant-numeric:tabular-nums}
 
+/* кольца прогресса */
+.ring .rbg{stroke:var(--raise)}
+.ring .rfg{stroke:var(--ink);transform:rotate(-90deg);transform-origin:50% 50%;
+  transition:stroke-dashoffset .55s cubic-bezier(.2,.8,.2,1)}
+.ring.accent .rfg{stroke:var(--accent)}
+
+/* герой-блок тренировки */
+.hero{display:flex;align-items:center;gap:15px;background:var(--surface);border-radius:var(--radius);
+  padding:16px 18px;margin-bottom:13px;box-shadow:var(--shadow);transition:background .4s ease}
+.hero.full{background:var(--good-soft)}
+.hring{flex:0 0 auto;display:flex}
+.hmid{flex:1;min-width:0}
+.hnum{display:flex;align-items:baseline;gap:1px;line-height:1}
+.hnum b{font-size:2.1rem;font-weight:750;color:var(--strong);letter-spacing:-.045em;
+  font-variant-numeric:tabular-nums}
+.hnum i{font-style:normal;font-size:1.15rem;font-weight:600;color:var(--faint);
+  font-variant-numeric:tabular-nums}
+.hlab{font-size:.78rem;color:var(--muted);margin-top:3px;font-weight:500}
+.hvol{flex:0 0 auto;text-align:right;padding-left:12px;border-left:1px solid var(--line-soft)}
+.hvol b{display:block;font-size:1.12rem;font-weight:700;color:var(--accent);letter-spacing:-.03em;
+  font-variant-numeric:tabular-nums}
+.hvol span{display:block;font-size:.68rem;color:var(--faint);margin-top:2px}
+
 .card{background:var(--surface);border-radius:var(--radius);padding:18px;margin-bottom:12px;
   box-shadow:var(--shadow)}
 .card h3{font-size:1.05rem;font-weight:650;line-height:1.3;text-wrap:balance;letter-spacing:-.022em}
@@ -128,11 +151,13 @@ input{font-family:-apple-system,system-ui,sans-serif}
   background:var(--surface);color:transparent;font-size:1.1rem;font-weight:700;transition:all .18s}
 .srow.done .ck{background:var(--ink);border-color:var(--ink);color:var(--on-ink)}
 
-.restrow{display:flex;align-items:center;gap:12px;margin-top:2px;padding:12px 13px;
-  border-radius:var(--r-sm);background:var(--accent-soft)}
-.restrow .rl{font-size:.8rem;color:var(--muted);font-weight:600}
-.restrow .rt{flex:1;font-size:1.4rem;font-weight:700;color:var(--accent);
-  font-variant-numeric:tabular-nums;letter-spacing:-.025em}
+.restrow{display:flex;align-items:center;gap:13px;margin-top:2px;padding:11px 13px;
+  border-radius:var(--r-sm);background:var(--accent-soft);animation:slideIn .28s cubic-bezier(.2,.8,.2,1)}
+.restrow .rring{flex:0 0 auto;display:flex}
+.restrow .rmid{flex:1;min-width:0}
+.restrow .rl{display:block;font-size:.72rem;color:var(--muted);font-weight:600}
+.restrow .rt{display:block;font-size:1.5rem;font-weight:700;color:var(--accent);line-height:1.1;
+  font-variant-numeric:tabular-nums;letter-spacing:-.03em}
 .restrow .rx{padding:9px 15px;border-radius:99px;background:var(--surface);color:var(--muted);
   font-size:.8rem;font-weight:600;white-space:nowrap}
 .restrow .rx:active{background:var(--raise)}
@@ -180,5 +205,25 @@ input{font-family:-apple-system,system-ui,sans-serif}
   box-shadow:0 12px 32px -10px rgba(20,18,15,.5);max-width:82%;text-align:center}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
+
+/* движение */
+@keyframes cardIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes slideIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+@keyframes pop{0%{transform:scale(1)}42%{transform:scale(1.16)}100%{transform:scale(1)}}
+.card.in{animation:cardIn .34s cubic-bezier(.2,.8,.2,1) both}
+.srow.done .ck{animation:pop .34s cubic-bezier(.2,.8,.2,1)}
+.opt,.chip,.dbtn,.tab,.ck{will-change:auto}
+
+/* столбики объёма в профиле */
+.vrow{margin-bottom:11px}
+.vrow:last-child{margin-bottom:0}
+.vtop{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:5px}
+.vtop span{font-size:.85rem;color:var(--muted)}
+.vtop b{font-size:.85rem;color:var(--strong);font-weight:650;font-variant-numeric:tabular-nums}
+.vbar{height:7px;border-radius:99px;background:var(--raise);overflow:hidden}
+.vbar i{display:block;height:100%;border-radius:99px;background:var(--ink);
+  transition:width .6s cubic-bezier(.2,.8,.2,1)}
+
 :focus-visible{outline:2px solid var(--ink);outline-offset:3px;border-radius:6px}
-@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}
+  .card.in{opacity:1;transform:none}}
