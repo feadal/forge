@@ -1,7 +1,7 @@
 (function(){
 "use strict";
 var KEY="forge_v1";
-var APP_VERSION=3;
+var APP_VERSION=4;
 var S=null, mem=null;
 
 function load(){ try{var r=localStorage.getItem(KEY); if(r) return JSON.parse(r);}catch(e){} return null; }
@@ -252,9 +252,10 @@ function renderApp(){
 
   var main = el("div","main");
 
-  if(S.program && S.version !== APP_VERSION && !S.staleHidden){
+  var isStale = S.program && (S.version !== APP_VERSION || !S.profile || !S.profile.split);
+  if(isStale && !S.staleHidden){
     var sb = el("div","warn");
-    sb.appendChild(el("div",null,"Эта программа собрана прошлой версией приложения — в ней нет сушки, учёта травм и новой периодизации."));
+    sb.appendChild(el("div",null,"Программа собрана прошлой версией — в ней нельзя было выбрать схему тренировок (сплит, фулбади, верх/низ). Пересобери, чтобы выбрать свою."));
     var brow = el("div","row2");
     var rb = el("button","accent-btn","Пересобрать");
     rb.onclick = function(){ startWizard(); };
