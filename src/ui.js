@@ -233,7 +233,35 @@ function lastLogged(di, xi, si){
   return null;
 }
 
-var restTimer=null, restLeft=0, restKey=null, restTotal=150;
+var restTimer=null, restLeft=0, restKey=null, restTotal=150, restEnd=0;
+var wakeLock=null;
+function keepAwake(){
+  try{
+    if(navigator.wakeLock && !wakeLock){
+      navigator.wakeLock.request("screen").then(function(l){
+        wakeLock=l;
+        l.addEventListener&&l.addEventListener("release",function(){ wakeLock=null; });
+      }).catch(function(){});
+    }
+  }catch(e){}
+}
+function dropAwake(){ try{ if(wakeLock&&wakeLock.release) wakeLock.release(); }catch(e){} wakeLock=null; }
+function beep(){
+  try{
+    var C=window.AudioContext||window.webkitAudioContext; if(!C) return;
+    var ctx=new C(); var o=ctx.createOscillator(), g=ctx.createGain();
+    o.type="sine"; o.frequency.value=880;
+    g.gain.setValueAtTime(0.0001, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.14, ctx.currentTime+0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime+0.45);
+    o.connect(g); g.connect(ctx.destination);
+    o.start(); o.stop(ctx.currentTime+0.5);
+    setTimeout(function(){ try{ctx.close();}catch(e){} }, 900);
+  }catch(e){}
+}
+var SET_TAG={w:"Р",d:"Д",f:"О"};
+var SET_TAG_RU={w:"разминочный",d:"дроп-сет",f:"до отказа"};
+
 function ringSVG(pct, size, stroke, cls){
   pct = Math.max(0, Math.min(1, pct||0));
   var r=(size-stroke)/2, c=2*Math.PI*r, off=c*(1-pct);
@@ -260,17 +288,39 @@ function segRing(done, total, size, stroke){
 function buzz(ms){ try{ if(navigator.vibrate) navigator.vibrate(ms||12); }catch(e){} }
 function e1rm(w,r){ return w*(1+r/30); }
 
+var clockTimer=null;
+function fmtElapsed(){
+  if(!S.sessionStart) return "0:00";
+  var t=Math.max(0,Math.floor((Date.now()-S.sessionStart)/1000));
+  var h=Math.floor(t/3600), m=Math.floor((t%3600)/60), sec=t%60;
+  return h ? (h+":"+String(m).padStart(2,"0")+":"+String(sec).padStart(2,"0"))
+           : (m+":"+String(sec).padStart(2,"0"));
+}
+function startClock(){
+  if(clockTimer) return;
+  clockTimer=setInterval(function(){
+    var e=document.getElementById("elapsed");
+    if(!e){ clearInterval(clockTimer); clockTimer=null; return; }
+    e.textContent=fmtElapsed();
+  },1000);
+}
+function stopClock(){ clearInterval(clockTimer); clockTimer=null; }
+
 function fmtRest(sec){
   var m=Math.floor(sec/60), s=sec%60;
   return m+":"+(s<10?"0":"")+s;
 }
 function stopRest(){
-  clearInterval(restTimer); restTimer=null; restLeft=0; restKey=null;
+  clearInterval(restTimer); restTimer=null; restLeft=0; restKey=null; restEnd=0;
+  if(S && S.rest){ S.rest=null; try{save();}catch(e){} }
   var n=document.getElementById("restrow"); if(n && n.parentNode) n.parentNode.removeChild(n);
 }
+function restRemaining(){
+  return restEnd ? Math.max(0, Math.round((restEnd-Date.now())/1000)) : 0;
+}
 function tickRest(){
-  restLeft--;
-  if(restLeft<=0){ buzz([18,60,18]); stopRest(); render(); return; }
+  restLeft=restRemaining();
+  if(restLeft<=0){ buzz([18,60,18]); beep(); stopRest(); render(); return; }
   var t=document.getElementById("resttime");
   if(!t){ render(); return; }
   t.textContent=fmtRest(restLeft);
@@ -278,8 +328,33 @@ function tickRest(){
   if(rg) rg.innerHTML=ringSVG(restLeft/restTotal, 40, 4, "accent");
 }
 function startRest(sec, key){
-  clearInterval(restTimer); restLeft=sec; restTotal=sec; restKey=key;
+  clearInterval(restTimer);
+  restTotal=sec; restKey=key;
+  restEnd=Date.now()+sec*1000;
+  restLeft=sec;
+  S.rest={end:restEnd,total:sec,key:key};
+  save(); keepAwake();
   restTimer=setInterval(tickRest,1000);
+}
+function resumeRest(){
+  if(!S.rest || !S.rest.end) return;
+  var left=Math.round((S.rest.end-Date.now())/1000);
+  if(left<=0){ S.rest=null; save(); return; }
+  restEnd=S.rest.end; restTotal=S.rest.total||150; restKey=S.rest.key; restLeft=left;
+  clearInterval(restTimer);
+  restTimer=setInterval(tickRest,1000);
+}
+if(typeof document!=="undefined" && document.addEventListener){
+  document.addEventListener("visibilitychange",function(){
+    if(document.visibilityState==="visible"){
+      if(restEnd){
+        restLeft=restRemaining();
+        if(restLeft<=0){ stopRest(); }
+        render();
+      }
+      if(S && S.step==="app" && S.tab==="train") keepAwake();
+    }
+  });
 }
 function restRow(){
   var row=el("div","restrow");
@@ -387,13 +462,22 @@ function renderTrain(main, prog){
     var nn=setsForWeek(p.x.sets,S.week);
     for(var q=0;q<nn;q++){
       var rr=S.log[logKey(S.dayIdx,p.i,q)];
-      if(rr){ var w=parseFloat(String(rr.w).replace(",","."))||0, rp=parseFloat(rr.r)||0; vol+=w*rp; }
+      if(rr && rr.t!=="w"){ var w=parseFloat(String(rr.w).replace(",","."))||0, rp=parseFloat(rr.r)||0; vol+=w*rp; }
     }
   });
-  if(vol>0){
+  if(vol>0 || S.sessionStart){
     var hv=el("div","hvol");
-    hv.appendChild(el("b",null, Math.round(vol).toLocaleString("ru-RU")));
-    hv.appendChild(el("span",null,"кг тоннаж"));
+    if(vol>0){
+      hv.appendChild(el("b",null, Math.round(vol).toLocaleString("ru-RU")));
+      hv.appendChild(el("span",null,"кг тоннаж"));
+    }
+    if(S.sessionStart){
+      var tw=el("div","htime");
+      var tb=el("b",null,fmtElapsed()); tb.id="elapsed";
+      tw.appendChild(tb); tw.appendChild(el("span",null,"в зале"));
+      hv.appendChild(tw);
+      startClock();
+    }
     hero.appendChild(hv);
   }
   main.appendChild(hero);
@@ -415,22 +499,54 @@ function renderTrain(main, prog){
       (function(si){
         var k = logKey(S.dayIdx, xi, si);
         var rec = S.log[k] || {w:"",r:"",done:false};
-        var row = el("div","srow"+(rec.done?" done":""));
-        row.appendChild(el("span","snum", String(si+1)));
+        var row = el("div","srow"+(rec.done?" done":"")+(rec.t?" t-"+rec.t:""));
+        var sn = el("button","snum"+(rec.t?" tag":""), rec.t ? SET_TAG[rec.t] : String(si+1));
+        sn.onclick=function(){
+          var order=[null,"w","d","f"];
+          var i=order.indexOf(rec.t||null);
+          rec.t = order[(i+1)%order.length];
+          S.log[k]=rec; buzz(8); save(); render();
+        };
+        row.appendChild(sn);
         var prev = lastLogged(S.dayIdx, xi, si);
-        var f1=el("div","fld"); var i1=el("input"); i1.type="text"; i1.inputMode="decimal"; i1.value=rec.w;
-        i1.placeholder = prev ? String(prev.w) : "";
-        i1.oninput=function(){ rec.w=i1.value; S.log[k]=rec; save(); };
+
+        var pv = el("button","pv", prev ? (prev.w+"×"+prev.r) : "—");
+        if(!prev) pv.classList.add("empty");
+        row.appendChild(pv);
+
+        var ghost = (!rec.w && !rec.r && prev) ? true : false;
+        var f1=el("div","fld"); var i1=el("input"); i1.type="text"; i1.inputMode="decimal";
+        i1.value = rec.w!=="" ? rec.w : (ghost ? String(prev.w) : "");
+        if(ghost) i1.className="ghost";
+        i1.onfocus=function(){ try{ i1.select(); }catch(e){} };
+        i1.oninput=function(){ rec.w=i1.value; i1.className=""; S.log[k]=rec; save(); };
         f1.appendChild(i1); f1.appendChild(el("span","unit","кг")); row.appendChild(f1);
-        var f2=el("div","fld"); var i2=el("input"); i2.type="text"; i2.inputMode="numeric"; i2.value=rec.r;
-        i2.placeholder = prev ? String(prev.r) : "";
-        i2.oninput=function(){ rec.r=i2.value; S.log[k]=rec; save(); };
+
+        var f2=el("div","fld"); var i2=el("input"); i2.type="text"; i2.inputMode="numeric";
+        i2.value = rec.r!=="" ? rec.r : (ghost ? String(prev.r) : "");
+        if(ghost) i2.className="ghost";
+        i2.onfocus=function(){ try{ i2.select(); }catch(e){} };
+        i2.oninput=function(){ rec.r=i2.value; i2.className=""; S.log[k]=rec; save(); };
         f2.appendChild(i2); f2.appendChild(el("span","unit","повт")); row.appendChild(f2);
+
+        pv.onclick=function(){
+          if(!prev) return;
+          rec.w=String(prev.w); rec.r=String(prev.r);
+          S.log[k]=rec; buzz(8); save(); render();
+        };
+
         var ck=el("button","ck","✓");
         ck.onclick=function(){
-          rec.done=!rec.done; S.log[k]=rec; save();
-          if(rec.done){ buzz(14); startRest(x.type==="comp" ? 150 : 90, k); } else stopRest();
-          render();
+          if(!rec.done){
+            if(rec.w==="" && i1.value) rec.w=i1.value;
+            if(rec.r==="" && i2.value) rec.r=i2.value;
+          }
+          rec.done=!rec.done; S.log[k]=rec;
+          if(rec.done){
+            if(!S.sessionStart) S.sessionStart=Date.now();
+            buzz(14); startRest(x.type==="comp" ? 150 : 90, k);
+          } else stopRest();
+          save(); render();
         };
         row.appendChild(ck);
         sets.appendChild(row);
@@ -460,7 +576,7 @@ function bestBefore(xi, si_unused, upToWeek){
   for(var w=1; w<upToWeek; w++){
     for(var si=0; si<8; si++){
       var r=S.log[w+"|"+S.dayIdx+"|"+xi+"|"+si];
-      if(!r) continue;
+      if(!r || r.t==="w") continue;
       var ww=parseFloat(String(r.w).replace(",","."))||0, rr=parseFloat(r.r)||0;
       if(ww>0&&rr>0){ var e=e1rm(ww,rr); if(e>best) best=e; }
     }
@@ -474,7 +590,7 @@ function finishSession(){
     var n=setsForWeek(x.sets,S.week), exVol=0, exBest=0, used=false;
     for(var si=0;si<n;si++){
       var r=S.log[logKey(S.dayIdx,xi,si)];
-      if(r){
+      if(r && r.t!=="w"){
         var w=parseFloat(String(r.w).replace(",","."))||0, rr=parseFloat(r.r)||0;
         if(w>0&&rr>0){ exVol+=w*rr; setCount++; used=true; var e=e1rm(w,rr); if(e>exBest) exBest=e; }
       }
@@ -494,7 +610,7 @@ function finishSession(){
     var n=setsForWeek(x.sets,S.week);
     for(var si=0;si<n;si++){ var k=logKey(S.dayIdx,xi,si); if(S.log[k]) S.log[k].done=false; }
   });
-  stopRest();
+  stopRest(); stopClock(); S.sessionStart=null; dropAwake();
   S.summary={ idx:S.history.length-1, total:Math.round(total), sets:setCount, ex:exCount,
               day:day.name, records:records };
   S.step="summary";
@@ -716,6 +832,7 @@ function render(){
   window.scrollTo(0,0);
 }
 
+resumeRest();
 window.FORGE_UI={render:render};
 render();
 })();
