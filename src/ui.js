@@ -443,7 +443,9 @@ function renderTrain(main, prog){
   var totalSets=0, doneSets=0;
   plan.forEach(function(p){
     var n = setsForWeek(p.x.sets, S.week);
-    totalSets += n;
+    totalSets += n + 1;
+    var wk = S.log[logKey(S.dayIdx,p.i,"w0")];
+    if(wk && wk.done) doneSets++;
     for(var si=0; si<n; si++){ if(S.log[logKey(S.dayIdx,p.i,si)] && S.log[logKey(S.dayIdx,p.i,si)].done) doneSets++; }
   });
   var pct = totalSets ? doneSets/totalSets : 0;
@@ -492,9 +494,67 @@ function renderTrain(main, prog){
     card.style.animationDelay = (ci*45)+"ms";
     card.appendChild(el("h3",null, esc(x.name)));
     var n = setsForWeek(x.sets, S.week);
-    card.appendChild(el("div","cmeta","<b>"+n+" × "+esc(x.reps)+"</b> · RIR "+esc(x.rir)+" · "+esc(FORGE.MUSCLE_RU[x.muscle]||"")));
+    card.appendChild(el("div","cmeta","<b>"+n+" × "+esc(x.reps)+"</b> · RIR "+esc(x.rir)+" · "+esc(FORGE.MUSCLE_RU[x.muscle]||"")+" <em>+ разминка</em>"));
     if(x.cue) card.appendChild(el("p","cue", esc(x.cue)));
     var sets = el("div","sets");
+
+    (function(){
+      var wkey = logKey(S.dayIdx, xi, "w0");
+      var wrec = S.log[wkey] || {w:"",r:"",done:false,t:"w"};
+      wrec.t="w";
+      var wrow = el("div","srow warm"+(wrec.done?" done":""));
+      wrow.appendChild(el("span","snum tag","Р"));
+
+      var wprev = S.log[(S.week-1)+"|"+S.dayIdx+"|"+xi+"|w0"];
+      var firstWork = lastLogged(S.dayIdx, xi, 0);
+      var suggest = "";
+      if(wprev && wprev.w) suggest = String(wprev.w);
+      else if(firstWork && firstWork.w){
+        var base = parseFloat(String(firstWork.w).replace(",","."))||0;
+        if(base>0) suggest = String(Math.round(base*0.5/2.5)*2.5);
+      }
+      var pw = el("button","pv"+(suggest?"":" empty"), suggest ? ("≈"+suggest) : "разминка");
+      wrow.appendChild(pw);
+
+      var wf1=el("div","fld"); var w1=el("input"); w1.type="text"; w1.inputMode="decimal";
+      var wghost = (!wrec.w && suggest);
+      w1.value = wrec.w!=="" ? wrec.w : (wghost ? suggest : "");
+      if(wghost) w1.className="ghost";
+      w1.onfocus=function(){ try{ w1.select(); }catch(e){} };
+      w1.oninput=function(){ wrec.w=w1.value; w1.className=""; S.log[wkey]=wrec; save(); };
+      wf1.appendChild(w1); wf1.appendChild(el("span","unit","кг")); wrow.appendChild(wf1);
+
+      var wf2=el("div","fld"); var w2=el("input"); w2.type="text"; w2.inputMode="numeric";
+      w2.value = wrec.r!=="" ? wrec.r : "";
+      w2.placeholder = "8";
+      w2.onfocus=function(){ try{ w2.select(); }catch(e){} };
+      w2.oninput=function(){ wrec.r=w2.value; S.log[wkey]=wrec; save(); };
+      wf2.appendChild(w2); wf2.appendChild(el("span","unit","повт")); wrow.appendChild(wf2);
+
+      pw.onclick=function(){
+        if(!suggest) return;
+        wrec.w=suggest; if(!wrec.r) wrec.r="8";
+        S.log[wkey]=wrec; buzz(8); save(); render();
+      };
+
+      var wck=el("button","ck","✓");
+      wck.onclick=function(){
+        if(!wrec.done){
+          if(wrec.w==="" && w1.value) wrec.w=w1.value;
+          if(wrec.r==="" && w2.value) wrec.r=w2.value;
+        }
+        wrec.done=!wrec.done; S.log[wkey]=wrec;
+        if(wrec.done){
+          if(!S.sessionStart) S.sessionStart=Date.now();
+          buzz(14); startRest(60, wkey);
+        } else stopRest();
+        save(); render();
+      };
+      wrow.appendChild(wck);
+      sets.appendChild(wrow);
+      if(restKey===wkey && restLeft>0) sets.appendChild(restRow());
+    })();
+
     for(var si=0; si<n; si++){
       (function(si){
         var k = logKey(S.dayIdx, xi, si);

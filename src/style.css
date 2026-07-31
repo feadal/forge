@@ -268,6 +268,12 @@ input{font-family:-apple-system,system-ui,sans-serif}
 .edot.on{background:var(--ink);color:var(--on-ink);transform:scale(1.06)}
 .escale-lab{display:flex;justify-content:space-between;margin-top:8px;font-size:.68rem;color:var(--faint)}
 
+.srow.warm{background:var(--elev);border-radius:var(--r-sm)}
+.srow.warm.done{background:var(--good-soft)}
+.srow.warm .fld input{background:var(--surface)}
+.srow.warm .pv{background:var(--surface);font-size:.74rem}
+.cmeta em{font-style:normal;color:var(--faint);font-size:.74rem}
+
 :focus-visible{outline:2px solid var(--ink);outline-offset:3px;border-radius:6px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}
   .card.in{opacity:1;transform:none}}
