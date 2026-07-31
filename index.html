@@ -296,7 +296,87 @@ const LIMITS = {
 function round(x){ return Math.round(x); }
 function clamp(x,a,b){ return Math.max(a, Math.min(b,x)); }
 
+const LEGS_ALL = ["quads","hams","glutes","calves"];
+const BACK_ALL = ["lats","upback","traps"];
+
+const BRO_ANT = {
+  3: [["Грудь + бицепс",["chest","biceps"]],
+      ["Спина + трицепс",BACK_ALL.concat("triceps")],
+      ["Ноги + плечи",LEGS_ALL.concat(["sdelt","rdelt","core"])]],
+  4: [["Грудь + бицепс",["chest","biceps"]],
+      ["Спина + трицепс",BACK_ALL.concat("triceps")],
+      ["Ноги",LEGS_ALL.concat("core")],
+      ["Плечи + пресс",["sdelt","rdelt","core"]]],
+  5: [["Грудь + бицепс",["chest","biceps"]],
+      ["Спина + трицепс",BACK_ALL.concat("triceps")],
+      ["Ноги",LEGS_ALL],
+      ["Плечи + пресс",["sdelt","rdelt","core"]],
+      ["Руки",["biceps","triceps"]]],
+  6: [["Грудь + бицепс",["chest","biceps"]],
+      ["Спина + трицепс",BACK_ALL.concat("triceps")],
+      ["Ноги",LEGS_ALL],
+      ["Плечи + пресс",["sdelt","rdelt","core"]],
+      ["Руки",["biceps","triceps"]],
+      ["Грудь + спина",["chest"].concat(BACK_ALL)]]
+};
+const BRO_ANT_UPPER = {
+  3: [["Грудь + бицепс",["chest","biceps"]],
+      ["Спина + трицепс",BACK_ALL.concat("triceps")],
+      ["Плечи + пресс",["sdelt","rdelt","core"]]],
+  4: [["Грудь + бицепс",["chest","biceps"]],
+      ["Спина + трицепс",BACK_ALL.concat("triceps")],
+      ["Плечи + пресс",["sdelt","rdelt","core"]],
+      ["Руки",["biceps","triceps"]]],
+  5: [["Грудь + бицепс",["chest","biceps"]],
+      ["Спина + трицепс",BACK_ALL.concat("triceps")],
+      ["Плечи + пресс",["sdelt","rdelt","core"]],
+      ["Руки",["biceps","triceps"]],
+      ["Грудь + спина",["chest"].concat(BACK_ALL)]]
+};
+
+const BRO_SYN = {
+  3: [["Грудь + трицепс",["chest","triceps"]],
+      ["Спина + бицепс",BACK_ALL.concat("biceps")],
+      ["Ноги + плечи",LEGS_ALL.concat(["sdelt","rdelt","core"])]],
+  4: [["Грудь + трицепс",["chest","triceps"]],
+      ["Спина + бицепс",BACK_ALL.concat("biceps")],
+      ["Ноги",LEGS_ALL.concat("core")],
+      ["Плечи + пресс",["sdelt","rdelt","core"]]],
+  5: [["Грудь + трицепс",["chest","triceps"]],
+      ["Спина + бицепс",BACK_ALL.concat("biceps")],
+      ["Ноги",LEGS_ALL],
+      ["Плечи + пресс",["sdelt","rdelt","core"]],
+      ["Руки",["biceps","triceps"]]],
+  6: [["Грудь + трицепс",["chest","triceps"]],
+      ["Спина + бицепс",BACK_ALL.concat("biceps")],
+      ["Ноги",LEGS_ALL],
+      ["Плечи + пресс",["sdelt","rdelt","core"]],
+      ["Руки",["biceps","triceps"]],
+      ["Грудь + спина",["chest"].concat(BACK_ALL)]]
+};
+const BRO_SYN_UPPER = {
+  3: [["Грудь + трицепс",["chest","triceps"]],
+      ["Спина + бицепс",BACK_ALL.concat("biceps")],
+      ["Плечи + пресс",["sdelt","rdelt","core"]]],
+  4: [["Грудь + трицепс",["chest","triceps"]],
+      ["Спина + бицепс",BACK_ALL.concat("biceps")],
+      ["Плечи + пресс",["sdelt","rdelt","core"]],
+      ["Руки",["biceps","triceps"]]],
+  5: [["Грудь + трицепс",["chest","triceps"]],
+      ["Спина + бицепс",BACK_ALL.concat("biceps")],
+      ["Плечи + пресс",["sdelt","rdelt","core"]],
+      ["Руки",["biceps","triceps"]],
+      ["Грудь + спина",["chest"].concat(BACK_ALL)]]
+};
+
+const BRO_TABLES = {
+  bro_ant: {legs:BRO_ANT, upper:BRO_ANT_UPPER},
+  bro_syn: {legs:BRO_SYN, upper:BRO_SYN_UPPER}
+};
+
 const SPLIT_TPL = {
+  bro_ant: {ru:"Сплит: грудь+бицепс / спина+трицепс", byDays:true,                        minDays:3, maxDays:6},
+  bro_syn: {ru:"Сплит: грудь+трицепс / спина+бицепс", byDays:true,                        minDays:3, maxDays:6},
   full:  {ru:"Фулбади",         parts:[["full","Всё тело"]],                             minDays:2, maxDays:4},
   ul:    {ru:"Верх / Низ",       parts:[["upper","Верх"],["lower","Низ"]],                minDays:2, maxDays:6},
   ppl:   {ru:"Пуш / Пул / Ноги", parts:[["push","Жим"],["pull","Тяга"],["legs","Ноги"]],  minDays:3, maxDays:6},
@@ -308,6 +388,14 @@ function splitOptionsFor(days, legs){
   Object.keys(SPLIT_TPL).forEach(k=>{
     const t = SPLIT_TPL[k];
     if(days < t.minDays || days > t.maxDays) return;
+    if(t.byDays){
+      const tables = BRO_TABLES[k];
+      if(!tables) return;
+      const table = legs ? tables.legs : tables.upper;
+      if(!table || !table[days]) return;
+      out.push(k);
+      return;
+    }
     if(!legs && k !== "upper") return;
     if(legs && k === "upper") return;
     out.push(k);
@@ -315,9 +403,18 @@ function splitOptionsFor(days, legs){
   return out;
 }
 
-function buildFromTemplate(pref, days){
+function buildFromTemplate(pref, days, legs){
   const t = SPLIT_TPL[pref];
   if(!t) return null;
+  if(t.byDays){
+    const tables = BRO_TABLES[pref];
+    if(!tables) return null;
+    const table = legs ? tables.legs : tables.upper;
+    const rows = table && table[days];
+    if(!rows) return null;
+    return {name: t.ru + " · " + days + " дн/нед",
+            days: rows.map(r=>({name:r[0], muscles:r[1].slice()}))};
+  }
   const tpl = { upper: UPPER.concat("core"), lower: GROUP.legs, full: ALL, push: GROUP.push, pull: GROUP.pull.concat("core"), legs: GROUP.legs };
   const seq = [];
   const seen = {};
@@ -339,7 +436,7 @@ function chooseSplit(days, legs, goal, pref){
   const U="upper", L="lower", F="full", P="push", Pu="pull", Lg="legs";
   const tpl = { upper: UPPER, lower: GROUP.legs, full: ALL, push: GROUP.push, pull: GROUP.pull.concat("core"), legs: GROUP.legs };
   if(pref && pref!=="auto" && splitOptionsFor(days, legs).indexOf(pref)>=0){
-    const built = buildFromTemplate(pref, days);
+    const built = buildFromTemplate(pref, days, legs);
     if(built) return built;
   }
   let seq;
@@ -819,7 +916,9 @@ var Q = [
   {id:"legs", q:"Тренируешь ноги?", type:"pick", opts:[
     {v:true,l:"Да",d:"полноценная программа"},{v:false,l:"Нет",d:"только верх тела"}]},
   {id:"split", q:"Как разбить тренировки?", sub:"Можно довериться автовыбору — подберу под твои дни", type:"pick", optsFn:function(d){
-    var L={full:{l:"Фулбади",d:"всё тело каждую тренировку"},
+    var L={bro_ant:{l:"Сплит: грудь+бицепс",d:"и спина+трицепс — по антагонистам"},
+           bro_syn:{l:"Сплит: грудь+трицепс",d:"и спина+бицепс — по синергистам"},
+           full:{l:"Фулбади",d:"всё тело каждую тренировку"},
            ul:{l:"Верх / Низ",d:"чередуешь верх и низ тела"},
            ppl:{l:"Пуш / Пул / Ноги",d:"жимовые, тяговые, ноги"},
            upper:{l:"Только верх",d:"ноги не тренируем"}};
