@@ -242,7 +242,23 @@ function ringSVG(pct, size, stroke, cls){
     +'<circle class="rfg" cx="'+(size/2)+'" cy="'+(size/2)+'" r="'+r.toFixed(1)+'" stroke-width="'+stroke
     +'" fill="none" stroke-linecap="round" stroke-dasharray="'+c.toFixed(1)+'" stroke-dashoffset="'+off.toFixed(1)+'"/></svg>';
 }
+function segRing(done, total, size, stroke){
+  if(!total) return ringSVG(0, size, stroke);
+  if(total > 16) return ringSVG(done/total, size, stroke);
+  var r=(size-stroke)/2, c=2*Math.PI*r;
+  var gapPx = total>1 ? Math.max(3, Math.min(7, c*0.035)) : 0;
+  var seg = (c - gapPx*total)/total;
+  var out='<svg class="ring seg" width="'+size+'" height="'+size+'" viewBox="0 0 '+size+' '+size+'">';
+  for(var i=0;i<total;i++){
+    var off = -(i*(seg+gapPx));
+    out += '<circle class="'+(i<done?"sfg":"sbg")+'" cx="'+(size/2)+'" cy="'+(size/2)+'" r="'+r.toFixed(1)
+      +'" fill="none" stroke-width="'+stroke+'" stroke-linecap="round" stroke-dasharray="'
+      +seg.toFixed(2)+' '+(c-seg).toFixed(2)+'" stroke-dashoffset="'+off.toFixed(2)+'"/>';
+  }
+  return out+'</svg>';
+}
 function buzz(ms){ try{ if(navigator.vibrate) navigator.vibrate(ms||12); }catch(e){} }
+function e1rm(w,r){ return w*(1+r/30); }
 
 function fmtRest(sec){
   var m=Math.floor(sec/60), s=sec%60;
@@ -357,10 +373,14 @@ function renderTrain(main, prog){
   });
   var pct = totalSets ? doneSets/totalSets : 0;
   var hero = el("div","hero"+(doneSets&&doneSets===totalSets?" full":""));
-  hero.appendChild(el("div","hring", ringSVG(pct, 62, 5)));
+  hero.appendChild(el("div","hring", segRing(doneSets, totalSets, 62, 6)));
   var hm = el("div","hmid");
   hm.appendChild(el("div","hnum","<b>"+doneSets+"</b><i>/"+totalSets+"</i>"));
-  hm.appendChild(el("div","hlab", doneSets===totalSets&&totalSets ? "тренировка закрыта" : "подходов сделано"));
+  var left = totalSets-doneSets;
+  var lab = (totalSets && doneSets===totalSets) ? "тренировка закрыта"
+          : doneSets===0 ? "подходов запланировано"
+          : (left<=3 ? "остал"+(left===1?"ся":"ось")+" "+left+" подход"+(left===1?"":left<5?"а":"ов") : "подходов сделано");
+  hm.appendChild(el("div","hlab", lab));
   hero.appendChild(hm);
   var vol=0;
   plan.forEach(function(p){
@@ -435,24 +455,102 @@ function renderTrain(main, prog){
   }
 }
 
+function bestBefore(xi, si_unused, upToWeek){
+  var best=0;
+  for(var w=1; w<upToWeek; w++){
+    for(var si=0; si<8; si++){
+      var r=S.log[w+"|"+S.dayIdx+"|"+xi+"|"+si];
+      if(!r) continue;
+      var ww=parseFloat(String(r.w).replace(",","."))||0, rr=parseFloat(r.r)||0;
+      if(ww>0&&rr>0){ var e=e1rm(ww,rr); if(e>best) best=e; }
+    }
+  }
+  return best;
+}
+
 function finishSession(){
-  var day=S.program.days[S.dayIdx], total=0, any=false;
+  var day=S.program.days[S.dayIdx], total=0, any=false, setCount=0, exCount=0, records=[];
   day.exercises.forEach(function(x,xi){
-    var n=setsForWeek(x.sets,S.week);
+    var n=setsForWeek(x.sets,S.week), exVol=0, exBest=0, used=false;
     for(var si=0;si<n;si++){
       var r=S.log[logKey(S.dayIdx,xi,si)];
-      if(r){ var w=parseFloat(String(r.w).replace(",","."))||0, rr=parseFloat(r.r)||0; if(w>0&&rr>0){ total+=w*rr; any=true; } }
+      if(r){
+        var w=parseFloat(String(r.w).replace(",","."))||0, rr=parseFloat(r.r)||0;
+        if(w>0&&rr>0){ exVol+=w*rr; setCount++; used=true; var e=e1rm(w,rr); if(e>exBest) exBest=e; }
+      }
+    }
+    if(used){
+      any=true; exCount++; total+=exVol;
+      var prev=bestBefore(xi, 0, S.week);
+      if(prev>0 && exBest>prev+0.5) records.push({name:x.name, from:Math.round(prev), to:Math.round(exBest)});
     }
   });
   if(!any){ toast("Нет вписанных подходов"); return; }
   var d=new Date();
   var ds=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
-  S.history.push({d:ds, day:day.name, total:Math.round(total), week:S.week});
+  var rec={d:ds, day:day.name, total:Math.round(total), week:S.week, sets:setCount, ex:exCount, effort:null};
+  S.history.push(rec);
   day.exercises.forEach(function(x,xi){
     var n=setsForWeek(x.sets,S.week);
     for(var si=0;si<n;si++){ var k=logKey(S.dayIdx,xi,si); if(S.log[k]) S.log[k].done=false; }
   });
-  save(); render(); toast("Записано ✓");
+  stopRest();
+  S.summary={ idx:S.history.length-1, total:Math.round(total), sets:setCount, ex:exCount,
+              day:day.name, records:records };
+  S.step="summary";
+  buzz([16,70,16]);
+  save(); render();
+}
+
+function renderSummary(){
+  var root=$("app"); root.innerHTML="";
+  var s=S.summary||{total:0,sets:0,ex:0,records:[],day:""};
+  var wrap=el("div","sum");
+  wrap.appendChild(el("div","sum-ring", segRing(s.sets, s.sets, 92, 8)));
+  wrap.appendChild(el("h2",null,"Тренировка закрыта"));
+  wrap.appendChild(el("p","lead", esc(s.day)+" · неделя "+S.week));
+
+  var st=el("div","sum-stats");
+  [[s.total.toLocaleString("ru-RU"),"кг тоннаж"],[s.sets,"подходов"],[s.ex,"упражнений"]].forEach(function(p){
+    var c=el("div","sum-stat");
+    c.appendChild(el("b",null,String(p[0])));
+    c.appendChild(el("span",null,p[1]));
+    st.appendChild(c);
+  });
+  wrap.appendChild(st);
+
+  if(s.records && s.records.length){
+    var rb=el("div","prs");
+    rb.appendChild(el("div","prs-h","Личные рекорды"));
+    s.records.forEach(function(r){
+      rb.appendChild(el("div","pr","<b>"+esc(r.name)+"</b><span>"+r.from+" → "+r.to+" кг</span>"));
+    });
+    wrap.appendChild(rb);
+  }
+
+  var eb=el("div","effort");
+  eb.appendChild(el("div","effort-h","Насколько тяжело далась?"));
+  var scale=el("div","escale");
+  for(var i=1;i<=10;i++){
+    (function(i){
+      var b=el("button","edot",String(i));
+      var cur=S.history[s.idx] && S.history[s.idx].effort;
+      if(cur===i) b.classList.add("on");
+      b.onclick=function(){
+        if(S.history[s.idx]) S.history[s.idx].effort=i;
+        buzz(10); save(); render();
+      };
+      scale.appendChild(b);
+    })(i);
+  }
+  eb.appendChild(scale);
+  eb.appendChild(el("div","escale-lab","<span>легко</span><span>до отказа</span>"));
+  wrap.appendChild(eb);
+
+  var done=el("button","accent-btn big","Готово");
+  done.onclick=function(){ S.step="app"; S.summary=null; save(); render(); };
+  wrap.appendChild(done);
+  root.appendChild(wrap);
 }
 
 function renderFood(main, nut){
@@ -610,7 +708,8 @@ function renderRedflag(){
 }
 
 function render(){
-  if(S.step==="redflag" && S.profile) renderRedflag();
+  if(S.step==="summary" && S.summary) renderSummary();
+  else if(S.step==="redflag" && S.profile) renderRedflag();
   else if(S.step==="wizard") renderWizard();
   else if(S.step==="app" && S.program) renderApp();
   else renderIntro();

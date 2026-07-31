@@ -224,6 +224,39 @@ input{font-family:-apple-system,system-ui,sans-serif}
 .vbar i{display:block;height:100%;border-radius:99px;background:var(--ink);
   transition:width .6s cubic-bezier(.2,.8,.2,1)}
 
+
+/* сегменты кольца */
+.ring.seg circle{transform:rotate(-90deg);transform-origin:50% 50%}
+.ring .sbg{stroke:var(--raise)}
+.ring .sfg{stroke:var(--ink);transition:stroke .25s ease}
+
+/* итоговый экран */
+.sum{padding:26px 2px 8px;text-align:center;animation:cardIn .4s cubic-bezier(.2,.8,.2,1) both}
+.sum-ring{display:flex;justify-content:center;margin-bottom:18px}
+.sum h2{font-size:1.7rem;font-weight:750;letter-spacing:-.035em}
+.sum .lead{margin:8px 0 24px;font-size:.9rem}
+.sum-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:14px}
+.sum-stat{background:var(--surface);border-radius:var(--radius);padding:16px 5px;box-shadow:var(--shadow)}
+.sum-stat b{display:block;font-size:1.5rem;font-weight:750;color:var(--strong);letter-spacing:-.04em;
+  font-variant-numeric:tabular-nums;line-height:1.1}
+.sum-stat span{display:block;font-size:.68rem;color:var(--faint);margin-top:5px}
+.prs{background:var(--accent-soft);border-radius:var(--radius);padding:15px 16px;margin-bottom:14px;text-align:left}
+.prs-h{font-size:.7rem;text-transform:uppercase;letter-spacing:.09em;color:var(--accent);
+  font-weight:700;margin-bottom:9px}
+.pr{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:7px 0;
+  border-bottom:1px solid rgba(194,65,12,.12);font-size:.86rem}
+.pr:last-child{border-bottom:none}
+.pr b{font-weight:600;color:var(--strong);min-width:0}
+.pr span{color:var(--accent);font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
+.effort{background:var(--surface);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);
+  margin-bottom:4px}
+.effort-h{font-size:.88rem;color:var(--text);font-weight:600;margin-bottom:12px}
+.escale{display:grid;grid-template-columns:repeat(10,1fr);gap:5px}
+.edot{height:42px;border-radius:10px;background:var(--elev);color:var(--muted);font-size:.8rem;
+  font-weight:650;font-variant-numeric:tabular-nums;transition:all .15s}
+.edot.on{background:var(--ink);color:var(--on-ink);transform:scale(1.06)}
+.escale-lab{display:flex;justify-content:space-between;margin-top:8px;font-size:.68rem;color:var(--faint)}
+
 :focus-visible{outline:2px solid var(--ink);outline-offset:3px;border-radius:6px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}
   .card.in{opacity:1;transform:none}}
