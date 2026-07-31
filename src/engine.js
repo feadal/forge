@@ -228,6 +228,15 @@ function splitOptionsFor(days, legs){
   return out;
 }
 
+function daysOptionsFor(pref, legs){
+  const out = [];
+  for(let d=2; d<=6; d++){
+    if(!pref || pref==="auto"){ out.push(d); continue; }
+    if(splitOptionsFor(d, legs).indexOf(pref) >= 0) out.push(d);
+  }
+  return out.length ? out : [2,3,4,5,6];
+}
+
 function buildFromTemplate(pref, days, legs){
   const t = SPLIT_TPL[pref];
   if(!t) return null;
@@ -464,4 +473,4 @@ function buildNotes(input, split, achieved, target){
   return notes;
 }
 
-if(typeof module!=="undefined") module.exports = {generateProgram, MUSCLE_RU, MUSCLES, EX, LIMITS, SPLIT_TPL, splitOptionsFor};
+if(typeof module!=="undefined") module.exports = {generateProgram, MUSCLE_RU, MUSCLES, EX, LIMITS, SPLIT_TPL, splitOptionsFor, daysOptionsFor};
