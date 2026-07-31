@@ -296,9 +296,52 @@ const LIMITS = {
 function round(x){ return Math.round(x); }
 function clamp(x,a,b){ return Math.max(a, Math.min(b,x)); }
 
-function chooseSplit(days, legs, goal){
+const SPLIT_TPL = {
+  full:  {ru:"Фулбади",         parts:[["full","Всё тело"]],                             minDays:2, maxDays:4},
+  ul:    {ru:"Верх / Низ",       parts:[["upper","Верх"],["lower","Низ"]],                minDays:2, maxDays:6},
+  ppl:   {ru:"Пуш / Пул / Ноги", parts:[["push","Жим"],["pull","Тяга"],["legs","Ноги"]],  minDays:3, maxDays:6},
+  upper: {ru:"Только верх",      parts:[["upper","Верх"]],                                minDays:2, maxDays:6}
+};
+
+function splitOptionsFor(days, legs){
+  const out = ["auto"];
+  Object.keys(SPLIT_TPL).forEach(k=>{
+    const t = SPLIT_TPL[k];
+    if(days < t.minDays || days > t.maxDays) return;
+    if(!legs && k !== "upper") return;
+    if(legs && k === "upper") return;
+    out.push(k);
+  });
+  return out;
+}
+
+function buildFromTemplate(pref, days){
+  const t = SPLIT_TPL[pref];
+  if(!t) return null;
+  const tpl = { upper: UPPER.concat("core"), lower: GROUP.legs, full: ALL, push: GROUP.push, pull: GROUP.pull.concat("core"), legs: GROUP.legs };
+  const seq = [];
+  const seen = {};
+  for(let i=0;i<days;i++){
+    const part = t.parts[i % t.parts.length];
+    const key = part[0];
+    seen[key] = (seen[key]||0) + 1;
+    const many = days > t.parts.length;
+    const label = part[1] + (many ? " " + String.fromCharCode(64+seen[key]) : "");
+    seq.push({name: label, muscles: (tpl[key]||ALL).slice()});
+  }
+  const label = (days % t.parts.length === 0)
+    ? t.ru + " ×" + (days / t.parts.length)
+    : t.ru + " · " + days + " дн/нед";
+  return {name: label, days: seq};
+}
+
+function chooseSplit(days, legs, goal, pref){
   const U="upper", L="lower", F="full", P="push", Pu="pull", Lg="legs";
   const tpl = { upper: UPPER, lower: GROUP.legs, full: ALL, push: GROUP.push, pull: GROUP.pull.concat("core"), legs: GROUP.legs };
+  if(pref && pref!=="auto" && splitOptionsFor(days, legs).indexOf(pref)>=0){
+    const built = buildFromTemplate(pref, days);
+    if(built) return built;
+  }
   let seq;
   if(!legs){
     const u=(k)=>({name:"Верх "+k, muscles:UPPER.concat("core")});
@@ -403,7 +446,7 @@ function pickExercises(muscle, nsets, eqSet, usedPat, goal, rot, banned){
 function generateProgram(input){
   input = Object.assign({level:"int", days:4, minutes:75, goal:"hyp", legs:true, emphasis:[], exclude:[]}, input||{});
   input.days = clamp(input.days,2,6);
-  const split = chooseSplit(input.days, input.legs, input.goal);
+  const split = chooseSplit(input.days, input.legs, input.goal, input.split);
   const vol = weeklyVolume(input);
 
   const dayCount = {};
@@ -741,7 +784,7 @@ function generateNutrition(input){
   return {energy:e, macros:m, restrictionNotes:notes, goalNotes:goalNotes, foodsAvailable:foods.length, day, actual:sum ? {kcal:r(sum.kcal),p:r(sum.p),f:r(sum.f),c:r(sum.c),fib:r(sum.fib)} : null};
 }
 
-return {generateProgram:generateProgram, generateNutrition:generateNutrition, MUSCLE_RU:MUSCLE_RU, FOODS:FOODS, RESTRICTIONS:RESTRICTIONS};
+return {generateProgram:generateProgram, generateNutrition:generateNutrition, MUSCLE_RU:MUSCLE_RU, FOODS:FOODS, RESTRICTIONS:RESTRICTIONS, SPLIT_TPL:SPLIT_TPL, splitOptionsFor:splitOptionsFor};
 })();
 (function(){
 "use strict";
@@ -775,6 +818,18 @@ var Q = [
     {v:45,l:"45 минут"},{v:60,l:"60 минут"},{v:75,l:"75 минут"},{v:90,l:"90 минут"}]},
   {id:"legs", q:"Тренируешь ноги?", type:"pick", opts:[
     {v:true,l:"Да",d:"полноценная программа"},{v:false,l:"Нет",d:"только верх тела"}]},
+  {id:"split", q:"Как разбить тренировки?", sub:"Можно довериться автовыбору — подберу под твои дни", type:"pick", optsFn:function(d){
+    var L={full:{l:"Фулбади",d:"всё тело каждую тренировку"},
+           ul:{l:"Верх / Низ",d:"чередуешь верх и низ тела"},
+           ppl:{l:"Пуш / Пул / Ноги",d:"жимовые, тяговые, ноги"},
+           upper:{l:"Только верх",d:"ноги не тренируем"}};
+    var out=[{v:"auto",l:"Автоматически",d:"подберу лучший под "+(d.days||3)+" дн/нед"}];
+    (FORGE.splitOptionsFor(d.days||3, d.legs!==false)||[]).forEach(function(k){
+      if(k==="auto"||!L[k]) return;
+      out.push({v:k,l:L[k].l,d:L[k].d});
+    });
+    return out;
+  }},
   {id:"limits", q:"Есть проблемы с суставами или спиной?", sub:"Программа обойдёт опасные упражнения и предложит замены", type:"multi", optional:true, opts:[
     {v:"low_back",l:"Поясница"},{v:"knee",l:"Колени"},{v:"shoulder",l:"Плечи"},
     {v:"elbow",l:"Локти"},{v:"wrist",l:"Запястья"},{v:"hip",l:"Тазобедренный"},
@@ -827,8 +882,9 @@ function renderWizard(){
   if(q.sub) root.appendChild(el("p","wz-sub", esc(q.sub)));
 
   var box = el("div","wz-body");
+  var qOpts = q.optsFn ? q.optsFn(draft) : q.opts;
   if(q.type==="pick"){
-    q.opts.forEach(function(o){
+    qOpts.forEach(function(o){
       var b = el("button","opt", "<b>"+esc(o.l)+"</b>"+(o.d?"<i>"+esc(o.d)+"</i>":""));
       b.onclick=function(){ draft[q.id]=o.v; next(); };
       if(draft[q.id]===o.v) b.classList.add("on");
@@ -849,9 +905,9 @@ function renderWizard(){
     box.appendChild(go);
     setTimeout(function(){ inp.focus(); },80);
   } else if(q.type==="multi"){
-    if(!draft[q.id]) draft[q.id] = q.defAll ? q.opts.map(function(o){return o.v;}) : [];
+    if(!draft[q.id]) draft[q.id] = q.defAll ? qOpts.map(function(o){return o.v;}) : [];
     var grid = el("div","multi");
-    q.opts.forEach(function(o){
+    qOpts.forEach(function(o){
       var b = el("button","chip", esc(o.l));
       if(draft[q.id].indexOf(o.v)>=0) b.classList.add("on");
       b.onclick=function(){
@@ -891,10 +947,10 @@ function finish(){
     level:draft.level, goal:draft.goal, days:draft.days, minutes:draft.minutes,
     legs:draft.legs, emphasis:draft.emphasis||[], equipment:(draft.equipment&&draft.equipment.length?draft.equipment:["bb","db","cable","machine","bw"]),
     activity:draft.activity, nutgoal:draft.nutgoal, meals:draft.meals, restrictions:draft.restrictions||[],
-    limits:draft.limits||[], redflags:draft.redflags||[]
+    limits:draft.limits||[], redflags:draft.redflags||[], split:draft.split||"auto"
   };
   S.profile = p;
-  S.program = FORGE.generateProgram({level:p.level,days:p.days,minutes:p.minutes,goal:p.goal,legs:p.legs,emphasis:p.emphasis,equipment:p.equipment,limits:p.limits});
+  S.program = FORGE.generateProgram({level:p.level,days:p.days,minutes:p.minutes,goal:p.goal,legs:p.legs,emphasis:p.emphasis,equipment:p.equipment,limits:p.limits,split:p.split});
   S.nutrition = FORGE.generateNutrition({sex:p.sex,age:p.age,height:p.height,weight:p.weight,activity:p.activity,goal:p.nutgoal,meals:p.meals,restrictions:p.restrictions});
   S.version = APP_VERSION;
   S.step = (p.redflags && p.redflags.length) ? "redflag" : "app";

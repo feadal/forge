@@ -121,9 +121,52 @@ const LIMITS = {
 function round(x){ return Math.round(x); }
 function clamp(x,a,b){ return Math.max(a, Math.min(b,x)); }
 
-function chooseSplit(days, legs, goal){
+const SPLIT_TPL = {
+  full:  {ru:"Фулбади",         parts:[["full","Всё тело"]],                             minDays:2, maxDays:4},
+  ul:    {ru:"Верх / Низ",       parts:[["upper","Верх"],["lower","Низ"]],                minDays:2, maxDays:6},
+  ppl:   {ru:"Пуш / Пул / Ноги", parts:[["push","Жим"],["pull","Тяга"],["legs","Ноги"]],  minDays:3, maxDays:6},
+  upper: {ru:"Только верх",      parts:[["upper","Верх"]],                                minDays:2, maxDays:6}
+};
+
+function splitOptionsFor(days, legs){
+  const out = ["auto"];
+  Object.keys(SPLIT_TPL).forEach(k=>{
+    const t = SPLIT_TPL[k];
+    if(days < t.minDays || days > t.maxDays) return;
+    if(!legs && k !== "upper") return;
+    if(legs && k === "upper") return;
+    out.push(k);
+  });
+  return out;
+}
+
+function buildFromTemplate(pref, days){
+  const t = SPLIT_TPL[pref];
+  if(!t) return null;
+  const tpl = { upper: UPPER.concat("core"), lower: GROUP.legs, full: ALL, push: GROUP.push, pull: GROUP.pull.concat("core"), legs: GROUP.legs };
+  const seq = [];
+  const seen = {};
+  for(let i=0;i<days;i++){
+    const part = t.parts[i % t.parts.length];
+    const key = part[0];
+    seen[key] = (seen[key]||0) + 1;
+    const many = days > t.parts.length;
+    const label = part[1] + (many ? " " + String.fromCharCode(64+seen[key]) : "");
+    seq.push({name: label, muscles: (tpl[key]||ALL).slice()});
+  }
+  const label = (days % t.parts.length === 0)
+    ? t.ru + " ×" + (days / t.parts.length)
+    : t.ru + " · " + days + " дн/нед";
+  return {name: label, days: seq};
+}
+
+function chooseSplit(days, legs, goal, pref){
   const U="upper", L="lower", F="full", P="push", Pu="pull", Lg="legs";
   const tpl = { upper: UPPER, lower: GROUP.legs, full: ALL, push: GROUP.push, pull: GROUP.pull.concat("core"), legs: GROUP.legs };
+  if(pref && pref!=="auto" && splitOptionsFor(days, legs).indexOf(pref)>=0){
+    const built = buildFromTemplate(pref, days);
+    if(built) return built;
+  }
   let seq;
   if(!legs){
     const u=(k)=>({name:"Верх "+k, muscles:UPPER.concat("core")});
@@ -228,7 +271,7 @@ function pickExercises(muscle, nsets, eqSet, usedPat, goal, rot, banned){
 function generateProgram(input){
   input = Object.assign({level:"int", days:4, minutes:75, goal:"hyp", legs:true, emphasis:[], exclude:[]}, input||{});
   input.days = clamp(input.days,2,6);
-  const split = chooseSplit(input.days, input.legs, input.goal);
+  const split = chooseSplit(input.days, input.legs, input.goal, input.split);
   const vol = weeklyVolume(input);
 
   const dayCount = {};
@@ -324,4 +367,4 @@ function buildNotes(input, split, achieved, target){
   return notes;
 }
 
-if(typeof module!=="undefined") module.exports = {generateProgram, MUSCLE_RU, MUSCLES, EX, LIMITS};
+if(typeof module!=="undefined") module.exports = {generateProgram, MUSCLE_RU, MUSCLES, EX, LIMITS, SPLIT_TPL, splitOptionsFor};

@@ -12,7 +12,7 @@ OUT="$D/app-body.html"
   echo 'var FORGE=(function(){'
   grep -v '^if(typeof module' "$D/engine.js"
   grep -v '^if(typeof module' "$D/nutrition.js"
-  echo 'return {generateProgram:generateProgram, generateNutrition:generateNutrition, MUSCLE_RU:MUSCLE_RU, FOODS:FOODS, RESTRICTIONS:RESTRICTIONS};'
+  echo 'return {generateProgram:generateProgram, generateNutrition:generateNutrition, MUSCLE_RU:MUSCLE_RU, FOODS:FOODS, RESTRICTIONS:RESTRICTIONS, SPLIT_TPL:SPLIT_TPL, splitOptionsFor:splitOptionsFor};'
   echo '})();'
   cat "$D/ui.js"
   echo '</script>'

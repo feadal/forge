@@ -30,6 +30,18 @@ var Q = [
     {v:45,l:"45 минут"},{v:60,l:"60 минут"},{v:75,l:"75 минут"},{v:90,l:"90 минут"}]},
   {id:"legs", q:"Тренируешь ноги?", type:"pick", opts:[
     {v:true,l:"Да",d:"полноценная программа"},{v:false,l:"Нет",d:"только верх тела"}]},
+  {id:"split", q:"Как разбить тренировки?", sub:"Можно довериться автовыбору — подберу под твои дни", type:"pick", optsFn:function(d){
+    var L={full:{l:"Фулбади",d:"всё тело каждую тренировку"},
+           ul:{l:"Верх / Низ",d:"чередуешь верх и низ тела"},
+           ppl:{l:"Пуш / Пул / Ноги",d:"жимовые, тяговые, ноги"},
+           upper:{l:"Только верх",d:"ноги не тренируем"}};
+    var out=[{v:"auto",l:"Автоматически",d:"подберу лучший под "+(d.days||3)+" дн/нед"}];
+    (FORGE.splitOptionsFor(d.days||3, d.legs!==false)||[]).forEach(function(k){
+      if(k==="auto"||!L[k]) return;
+      out.push({v:k,l:L[k].l,d:L[k].d});
+    });
+    return out;
+  }},
   {id:"limits", q:"Есть проблемы с суставами или спиной?", sub:"Программа обойдёт опасные упражнения и предложит замены", type:"multi", optional:true, opts:[
     {v:"low_back",l:"Поясница"},{v:"knee",l:"Колени"},{v:"shoulder",l:"Плечи"},
     {v:"elbow",l:"Локти"},{v:"wrist",l:"Запястья"},{v:"hip",l:"Тазобедренный"},
@@ -82,8 +94,9 @@ function renderWizard(){
   if(q.sub) root.appendChild(el("p","wz-sub", esc(q.sub)));
 
   var box = el("div","wz-body");
+  var qOpts = q.optsFn ? q.optsFn(draft) : q.opts;
   if(q.type==="pick"){
-    q.opts.forEach(function(o){
+    qOpts.forEach(function(o){
       var b = el("button","opt", "<b>"+esc(o.l)+"</b>"+(o.d?"<i>"+esc(o.d)+"</i>":""));
       b.onclick=function(){ draft[q.id]=o.v; next(); };
       if(draft[q.id]===o.v) b.classList.add("on");
@@ -104,9 +117,9 @@ function renderWizard(){
     box.appendChild(go);
     setTimeout(function(){ inp.focus(); },80);
   } else if(q.type==="multi"){
-    if(!draft[q.id]) draft[q.id] = q.defAll ? q.opts.map(function(o){return o.v;}) : [];
+    if(!draft[q.id]) draft[q.id] = q.defAll ? qOpts.map(function(o){return o.v;}) : [];
     var grid = el("div","multi");
-    q.opts.forEach(function(o){
+    qOpts.forEach(function(o){
       var b = el("button","chip", esc(o.l));
       if(draft[q.id].indexOf(o.v)>=0) b.classList.add("on");
       b.onclick=function(){
@@ -146,10 +159,10 @@ function finish(){
     level:draft.level, goal:draft.goal, days:draft.days, minutes:draft.minutes,
     legs:draft.legs, emphasis:draft.emphasis||[], equipment:(draft.equipment&&draft.equipment.length?draft.equipment:["bb","db","cable","machine","bw"]),
     activity:draft.activity, nutgoal:draft.nutgoal, meals:draft.meals, restrictions:draft.restrictions||[],
-    limits:draft.limits||[], redflags:draft.redflags||[]
+    limits:draft.limits||[], redflags:draft.redflags||[], split:draft.split||"auto"
   };
   S.profile = p;
-  S.program = FORGE.generateProgram({level:p.level,days:p.days,minutes:p.minutes,goal:p.goal,legs:p.legs,emphasis:p.emphasis,equipment:p.equipment,limits:p.limits});
+  S.program = FORGE.generateProgram({level:p.level,days:p.days,minutes:p.minutes,goal:p.goal,legs:p.legs,emphasis:p.emphasis,equipment:p.equipment,limits:p.limits,split:p.split});
   S.nutrition = FORGE.generateNutrition({sex:p.sex,age:p.age,height:p.height,weight:p.weight,activity:p.activity,goal:p.nutgoal,meals:p.meals,restrictions:p.restrictions});
   S.version = APP_VERSION;
   S.step = (p.redflags && p.redflags.length) ? "redflag" : "app";
