@@ -889,13 +889,13 @@ const FOODS = [
   {id:"berries", ru:"Ягоды", cat:"carb", kcal:57, p:0.7, f:0.3, c:14, fib:2.4, tags:["vegan","gf"], slot:"am,snack", cost:2, prep:"none"},
   {id:"honey", ru:"Мёд", cat:"carb", kcal:304, p:0.3, f:0, c:82, fib:0, tags:["vegan","gf","fodmap"], slot:"am,snack", cost:2, prep:"none"},
 
-  {id:"olive_oil", ru:"Оливковое масло", cat:"fat", kcal:884, p:0, f:100, c:0, fib:0, tags:["vegan","gf"], slot:"main", cost:2, prep:"none"},
-  {id:"butter", ru:"Сливочное масло", cat:"fat", kcal:717, p:0.9, f:81, c:0.1, fib:0, tags:["milk","lactose_low"], slot:"am,main", cost:2, prep:"none"},
-  {id:"peanut_butter", ru:"Арахисовая паста", cat:"fat", kcal:588, p:25, f:50, c:20, fib:6, tags:["peanut","vegan"], slot:"am,snack", cost:1, prep:"none"},
-  {id:"almonds", ru:"Миндаль", cat:"fat", kcal:579, p:21, f:50, c:22, fib:12, tags:["treenut","vegan","gf"], slot:"snack", cost:3, prep:"none"},
-  {id:"walnuts", ru:"Грецкий орех", cat:"fat", kcal:654, p:15, f:65, c:14, fib:7, tags:["treenut","vegan","gf"], slot:"snack", cost:2, prep:"none"},
+  {id:"olive_oil", pure:1, ru:"Оливковое масло", cat:"fat", kcal:884, p:0, f:100, c:0, fib:0, tags:["vegan","gf"], slot:"main", cost:2, prep:"none"},
+  {id:"butter", pure:1, ru:"Сливочное масло", cat:"fat", kcal:717, p:0.9, f:81, c:0.1, fib:0, tags:["milk","lactose_low"], slot:"am,main", cost:2, prep:"none"},
+  {id:"peanut_butter", ru:"Арахисовая паста", cat:"fat", kcal:588, p:25, f:50, c:20, fib:6, tags:["peanut","vegan"], slot:"am,snack,main", cost:1, prep:"none"},
+  {id:"almonds", ru:"Миндаль", cat:"fat", kcal:579, p:21, f:50, c:22, fib:12, tags:["treenut","vegan","gf"], slot:"snack,main", cost:3, prep:"none"},
+  {id:"walnuts", ru:"Грецкий орех", cat:"fat", kcal:654, p:15, f:65, c:14, fib:7, tags:["treenut","vegan","gf"], slot:"snack,main", cost:2, prep:"none"},
   {id:"avocado", ru:"Авокадо", cat:"fat", kcal:160, p:2, f:15, c:9, fib:7, tags:["vegan","gf"], slot:"am,main", cost:3, prep:"none"},
-  {id:"seeds_sunflower", ru:"Семечки подсолнуха", cat:"fat", kcal:584, p:21, f:51, c:20, fib:9, tags:["vegan","gf"], slot:"snack", cost:1, prep:"none"},
+  {id:"seeds_sunflower", ru:"Семечки подсолнуха", cat:"fat", kcal:584, p:21, f:51, c:20, fib:9, tags:["vegan","gf"], slot:"snack,main", cost:1, prep:"none"},
 
   {id:"broccoli", ru:"Брокколи", cat:"veg", kcal:34, p:2.8, f:0.4, c:7, fib:2.6, tags:["vegan","gf"], slot:"main", cost:1, prep:"quick"},
   {id:"cucumber", ru:"Огурцы", cat:"veg", kcal:15, p:0.7, f:0.1, c:3.6, fib:0.5, tags:["vegan","gf"], slot:"main", cost:1, prep:"none"},
@@ -1040,7 +1040,10 @@ function poolFor(foods, cat, slot){
     }
   }
   var pool = strict.length ? strict : foods.filter(function(f){ return f.cat===cat; });
-  return pool.slice().sort(function(a,b){ return (a.spec?1:0)-(b.spec?1:0); });
+  return pool.slice().sort(function(a,b){
+    var pa=(a.spec?2:0)+(a.pure?1:0), pb=(b.spec?2:0)+(b.pure?1:0);
+    return pa-pb;
+  });
 }
 
 function buildMeals(input, m, foods, dayIndex){
@@ -1077,11 +1080,16 @@ function buildMeals(input, m, foods, dayIndex){
     }
     const poolRich = pPool.length >= 4;
     if(fTarget>0 && poolRich){
-      const lean = pPool.filter(function(f){
-        const g = pTarget/(f.p/100);
-        return (g*f.f/100) <= fTarget*0.9;
-      });
-      if(lean.length) pPool = lean;
+      const fatOf=function(f){
+        const g = clamp(pTarget/(f.p/100), 20, maxPortion(f));
+        return g*f.f/100;
+      };
+      // не берём тех, кто перебирает бюджет жира
+      const notFat = pPool.filter(function(f){ return fatOf(f) <= fTarget*1.05; });
+      if(notFat.length) pPool = notFat;
+      // среди оставшихся предпочитаем тех, кто сам даёт заметную часть жира
+      const carries = pPool.filter(function(f){ return fatOf(f) >= fTarget*0.3; });
+      if(carries.length >= 2 || (carries.length===1 && pPool.length<=2)) pPool = carries;
     }
     const mealKcal = pTarget*4 + cTarget*4 + fTarget*9;
     if(mealKcal>0 && pPool.length>1){
@@ -1111,7 +1119,8 @@ function buildMeals(input, m, foods, dayIndex){
     const carbFromP = pf ? pfGuess*pf.c/100 : 0;
     const needCarb = cTarget - carbFromP;
     const cf = needCarb>10 ? pickRot(fresh(cPool, usedC), i + rot) : null;
-    const ff = pickRot(fPool, i + rot);
+    const fWhole = fPool.filter(function(f){ return !f.pure; });
+    const ff = pickRot(fWhole.length ? fWhole : fPool, i + rot);
     const vf = (slot==="main") ? pickRot(vPool, i + rot) : null;
     if(pf) usedP[pf.id]=1;
     if(cf) usedC[cf.id]=1;
@@ -1133,7 +1142,11 @@ function buildMeals(input, m, foods, dayIndex){
     const items=[];
     items.push(mkItem(pf, roundPortion(gP, pf, gP < (MIN_PORTION[pf.id]||20)*0.8)));
     if(cf) items.push(mkItem(cf, roundPortion(gC, cf)));
-    if(ff && gF>=8 && leftF>4) items.push(mkItem(ff, Math.round(gF/5)*5));
+    if(ff && gF>=8 && leftF>4){
+      var gFat = Math.round(gF/5)*5;
+      if(ff.pure) gFat = Math.min(gFat, slot==="main" ? 12 : 8);
+      if(gFat>=5) items.push(mkItem(ff, gFat));
+    }
     if(vf) items.push(mkItem(vf, gV));
 
     const tot = items.reduce(function(a,x){return {kcal:a.kcal+x.kcal,p:a.p+x.p,f:a.f+x.f,c:a.c+x.c,fib:a.fib+x.fib};},{kcal:0,p:0,f:0,c:0,fib:0});
