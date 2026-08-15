@@ -261,6 +261,94 @@ function beep(){
     setTimeout(function(){ try{ctx.close();}catch(e){} }, 900);
   }catch(e){}
 }
+var finder={xi:null, w:"", r:"", rir:null};
+
+function midReps(range){
+  var m=String(range||"").match(/(\d+)\D+(\d+)/);
+  if(m) return Math.round((+m[1] + +m[2])/2);
+  var one=String(range||"").match(/(\d+)/);
+  return one ? +one[1] : 10;
+}
+function roundStep(kg){ return Math.max(2.5, Math.round(kg/2.5)*2.5); }
+
+function finderCalc(x){
+  var w=parseFloat(String(finder.w).replace(",","."))||0;
+  var r=parseFloat(finder.r)||0;
+  var rir=finder.rir;
+  if(!(w>0 && r>0 && rir!=null)) return null;
+  var toFail = r + rir;
+  if(toFail>30 || toFail<1) return null;
+  var e = w*(1+toFail/30);
+  var target = midReps(x.reps);
+  var work = e/(1+(target+2)/30);
+  return {work:roundStep(work), target:target, e:Math.round(e)};
+}
+
+function finderNode(x, xi){
+  var box=el("div","finder");
+  box.appendChild(el("div","fh","Подбор рабочего веса"));
+  box.appendChild(el("ol","fsteps",
+    "<li>Возьми заведомо лёгкий вес — такой, что точно поднимешь много раз.</li>"+
+    "<li>Сделай подход в чистой технике и остановись, пока запас ещё есть.</li>"+
+    "<li>Впиши, что получилось — посчитаю рабочий.</li>"));
+
+  var fields=el("div","ffields");
+  var fkey="finder:"+xi;
+  [["w","вес, кг"],["r","повторов"]].forEach(function(f){
+    var wrap=el("div","ffield");
+    wrap.appendChild(el("span",null,f[1]));
+    var b=el("button","fval", finder[f[0]] || "—");
+    b.onclick=function(){
+      padOpen(fkey+":"+f[0], f[0]==="w"?"w":"r",
+        function(){ return finder[f[0]]; },
+        function(v){ finder[f[0]]=v; },
+        function(){ padClose(); });
+    };
+    wrap.appendChild(b);
+    fields.appendChild(wrap);
+  });
+  box.appendChild(fields);
+  if(pad.key && String(pad.key).indexOf(fkey)===0) box.appendChild(padNode());
+
+  box.appendChild(el("div","frq","Сколько ещё мог бы сделать?"));
+  var chips=el("div","frow");
+  [0,1,2,3,4,5].forEach(function(v){
+    var c=el("button","fchip"+(finder.rir===v?" on":""), v===5?"5+":String(v));
+    c.onclick=function(){ finder.rir=v; buzz(8); render(); };
+    chips.appendChild(c);
+  });
+  box.appendChild(chips);
+
+  var res=finderCalc(x);
+  if(res){
+    var out=el("div","fout");
+    out.appendChild(el("div","fouth","Рабочий вес"));
+    out.appendChild(el("b",null, res.work+" кг"));
+    out.appendChild(el("span",null,"на "+res.target+" повторов с запасом 2"));
+    box.appendChild(out);
+    var apply=el("button","accent-btn","Поставить в подходы");
+    apply.onclick=function(){
+      var n=setsForWeek(x.sets,S.week);
+      for(var si=0; si<n; si++){
+        var k=logKey(S.dayIdx,xi,si);
+        var rec=S.log[k]||{w:"",r:"",done:false};
+        rec.w=String(res.work); rec.r=String(res.target);
+        S.log[k]=rec;
+      }
+      finder={xi:null,w:"",r:"",rir:null};
+      buzz(12); save(); render();
+      toast("Поставил "+res.work+" кг × "+res.target);
+    };
+    box.appendChild(apply);
+  } else {
+    box.appendChild(el("p","hint small","Заполни вес, повторы и запас — посчитаю рабочий."));
+  }
+  var cancel=el("button","ghost-btn","Закрыть");
+  cancel.onclick=function(){ finder={xi:null,w:"",r:"",rir:null}; render(); };
+  box.appendChild(cancel);
+  return box;
+}
+
 var pad={key:null, field:null, get:null, set:null, next:null};
 function padOpen(id, field, getV, setV, onNext){
   pad={key:id, field:field, get:getV, set:setV, next:onNext};
@@ -559,6 +647,29 @@ function renderTrain(main, prog){
     meta.appendChild(rchip);
     card.appendChild(meta);
     if(x.cue) card.appendChild(el("p","cue", esc(x.cue)));
+    var hasHistory=false;
+    for(var hw=1; hw<S.week && !hasHistory; hw++){
+      for(var hs=0; hs<8; hs++){
+        var hr=S.log[hw+"|"+S.dayIdx+"|"+xi+"|"+hs];
+        if(hr && hr.w){ hasHistory=true; break; }
+      }
+    }
+    var loggedNow=false;
+    for(var ls=0; ls<setsForWeek(x.sets,S.week); ls++){
+      var lr=S.log[logKey(S.dayIdx,xi,ls)];
+      if(lr && lr.w){ loggedNow=true; break; }
+    }
+    if(!hasHistory && !loggedNow){
+      if(finder.xi===xi) card.appendChild(finderNode(x, xi));
+      else {
+        (function(xi){
+          var fb=el("button","findbtn","Не знаю, с каким весом начать");
+          fb.onclick=function(){ finder={xi:xi,w:"",r:"",rir:null}; render(); };
+          card.appendChild(fb);
+        })(xi);
+      }
+    }
+
     var sets = el("div","sets");
 
     (function(){
@@ -831,6 +942,11 @@ function renderFood(main, nut){
   var p0=S.profile;
   if(p0 && p0.goal==="cut" && p0.nutgoal==="bulk"){
     main.appendChild(el("div","warn","⚠ Тренировки настроены на сушку, а питание — на набор массы. Это противоречие: выбери одно. Пересобрать программу можно во вкладке «Профиль»."));
+  }
+  if(nut.fitNotes && nut.fitNotes.length){
+    var fn=el("div","warn");
+    nut.fitNotes.forEach(function(t){ fn.appendChild(el("div",null,"⚠ "+esc(t))); });
+    main.appendChild(fn);
   }
   if(nut.goalNotes && nut.goalNotes.length){
     var g=el("div","warn");

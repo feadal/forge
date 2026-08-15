@@ -325,6 +325,29 @@ input{font-family:-apple-system,system-ui,sans-serif}
 .cstat span{display:block;font-size:.66rem;color:var(--faint);margin-top:3px}
 .hint.small{font-size:.74rem;margin-top:10px}
 
+.findbtn{width:100%;margin-top:12px;padding:12px;border-radius:var(--r-sm);
+  background:var(--accent-soft);color:var(--accent);font-size:.84rem;font-weight:650}
+.findbtn:active{filter:brightness(.96)}
+.finder{margin-top:12px;padding:15px;border-radius:var(--radius);background:var(--elev)}
+.fh{font-size:.92rem;font-weight:700;color:var(--strong);margin-bottom:9px}
+.fsteps{margin:0 0 14px;padding-left:20px;font-size:.82rem;color:var(--muted);line-height:1.55}
+.fsteps li{margin-bottom:5px}
+.ffields{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.ffield span{display:block;font-size:.7rem;color:var(--faint);margin-bottom:5px}
+.fval{width:100%;height:50px;border-radius:var(--r-sm);background:var(--surface);
+  color:var(--strong);font-size:1.05rem;font-weight:650;font-variant-numeric:tabular-nums}
+.fval:active{background:var(--raise)}
+.frq{font-size:.82rem;color:var(--text);margin:14px 0 8px;font-weight:600}
+.frow{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
+.fchip{height:44px;border-radius:11px;background:var(--surface);color:var(--muted);
+  font-size:.92rem;font-weight:650;font-variant-numeric:tabular-nums;transition:all .15s}
+.fchip.on{background:var(--ink);color:var(--on-ink)}
+.fout{margin-top:15px;padding:14px;border-radius:var(--r-sm);background:var(--accent-soft);text-align:center}
+.fouth{font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);font-weight:700}
+.fout b{display:block;font-size:1.9rem;font-weight:750;color:var(--accent);letter-spacing:-.04em;
+  font-variant-numeric:tabular-nums;margin:4px 0 2px}
+.fout span{font-size:.76rem;color:var(--muted)}
+
 :focus-visible{outline:2px solid var(--ink);outline-offset:3px;border-radius:6px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}
   .card.in{opacity:1;transform:none}}
