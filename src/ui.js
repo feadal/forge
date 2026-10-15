@@ -21,7 +21,7 @@ function save(){
 function storageWarning(){
   var t=document.getElementById("toast"); if(!t) return;
   t.textContent="Данные не сохраняются. Разреши сайтам хранить данные в настройках Safari.";
-  t.className="show is-sticky";
+  t.className="is-show is-sticky";
 }
 function normalize(s){
   var f=fresh();
@@ -298,9 +298,14 @@ function findExercise(id){
 }
 function shortSplit(name){ return String(name||"").replace(/^Сплит:\s*/,"").replace(/\s*·\s*\d+\s*дн\/нед$/,""); }
 // One spelling for a split everywhere: the questionnaire's words.
+function schemeName(p){
+  if(!p) return "";
+  if(p.scheme==="upper" && p.upperSplit) return "Только верх, грудь с "+(p.upperSplit==="bro_ant" ? "бицепсом" : "трицепсом");
+  return SCHEME_RU[p.scheme]||"";
+}
 function splitTitle(){
   var sch=S.profile && S.profile.scheme;
-  if(sch && sch!=="auto" && SCHEME_RU[sch]) return SCHEME_RU[sch];
+  if(sch && sch!=="auto" && SCHEME_RU[sch]) return schemeName(S.profile);
   return shortSplit(S.program.meta.split).replace(/\s*×\d+$/,"")
     .replace(/Пуш\s*\/\s*Пул\s*\/\s*Ноги/,"Жим, тяга, ноги")
     .replace(/\+\s*Верх\s*\/\s*Низ/,"+ верх и низ")
@@ -599,7 +604,7 @@ function renderSheet(){
     btn("sr-only sheet-close", "Закрыть", function(){ closeSheet(); }),
     h("div",{class:"sheet-body"}, sheetFn()));
   root.appendChild(scrim); root.appendChild(panel);
-  root.className="open";
+  root.className="is-open";
   document.documentElement.classList.add("has-sheet");
   setInert(true);
   try{ panel.focus({preventScroll:true}); }catch(e){ panel.focus(); }
@@ -683,10 +688,10 @@ function typeLabel(t){ return TYPE_RU[t] || "Обычный"; }
 function slot(state, f, unit){
   var on=state.field===f, v=state[f], ghost=(state.ghost && state.ghost[f]) || !v;
   var shown=v || "0";
-  return h("button",{class:"pocket"+(on?" focus":""), type:"button", "aria-pressed":String(on), "data-fk":"slot-"+f,
+  return h("button",{class:"pocket"+(on?" is-focus":""), type:"button", "aria-pressed":String(on), "data-fk":"slot-"+f,
       "aria-label":(f==="w"?"Вес":"Повторы")+" "+shown+(ghost?", предложено":""),
       onclick:function(){ state.field=f; state.fresh[f]=true; renderSheet(); }},
-    h("span",{class:"disp"+(ghost?" ghost":"")+(shown.replace(",","").length>=4?" is-long":"")}, shown),
+    h("span",{class:"disp"+(ghost?" is-ghost":"")+(shown.replace(",","").length>=4?" is-long":"")}, shown),
     on ? h("span",{class:"caret","aria-hidden":"true"}) : null,
     unit ? h("span",{class:"unit"}, unit) : null);
 }
@@ -775,14 +780,14 @@ function renderDock(){
   var root=$("dock"); if(!root) return;
   root.innerHTML="";
   if(S.step!=="app"){ root.className=""; setDockSpace(); return; }
-  root.className="on"+(S.rest?" is-resting":"");
+  root.className="is-on"+(S.rest?" is-resting":"");
   root.appendChild(h("div",{class:"dock-fade","aria-hidden":"true"}));
   if(S.rest) root.appendChild(platform());
   else if(S.session) root.appendChild(sessionPill());
   var tabs=[["train","Тренировка","bar"],["food","Питание","bowl"],["progress","Прогресс","steps"]];
   root.appendChild(h("nav",{class:"tabbar", "aria-label":"Разделы"}, tabs.map(function(t){
     var on=S.tab===t[0];
-    return h("button",{class:"tab"+(on?" on":""), type:"button", "aria-current":on?"page":null,
+    return h("button",{class:"tab"+(on?" is-on":""), type:"button", "aria-current":on?"page":null,
       onclick:function(){ S.tab=t[0]; save(); if(route()) go(""); else render(); }}, icon(on ? t[2]+"On" : t[2]), h("span",null,t[1]));
   })));
   if(S.session || S.rest) tick();
@@ -824,7 +829,7 @@ function platform(){
 }
 function setDockSpace(){
   var d=$("dock");
-  var hgt=d && d.className.indexOf("on")===0 ? d.getBoundingClientRect().height : 0;
+  var hgt=d && d.classList.contains("is-on") ? d.getBoundingClientRect().height : 0;
   document.documentElement.style.setProperty("--dock", Math.round(hgt)+"px");
 }
 
@@ -938,7 +943,7 @@ function activeSet(p, si){
     var shown=v!=null ? (field==="w" ? (loadKind(p.x)==="bw" && v>0 ? "+" : "")+fmt(v) : String(v)) : (field==="w" && isBarbell(p.x) ? "20" : "—");
     return h("button",{class:"pocket", type:"button", "data-fk":"act-"+p.x.id+"-"+field, onclick:function(){ openPad(p, si, field); },
         "aria-label":(field==="w"?"Вес ":"Повторы ")+shown+(ghost?", предложено":"")+". Изменить"},
-      h("span",{class:"fig"+(ghost||v==null?" ghost":"")+(shown.replace(",","").length>=4?" is-long":"")}, shown),
+      h("span",{class:"fig"+(ghost||v==null?" is-ghost":"")+(shown.replace(",","").length>=4?" is-long":"")}, shown),
       unit ? h("span",{class:"unit"}, unit) : null);
   }
   return h("div",{class:"act", role:"listitem"},
@@ -1296,7 +1301,7 @@ function renderSettings(root){
       row("Опыт", LEVEL_RU[p.level], function(){ editStep("level"); }),
       row("Цель", GOAL_RU[p.goal], function(){ editStep("goal"); }),
       row("Дни и время", p.days+NB+"×"+NB+p.minutes+NB+"мин", function(){ editStep("time"); }),
-      row("Схема", SCHEME_RU[p.scheme]||"", function(){ editStep("scheme"); }),
+      row("Схема", schemeName(p), function(){ editStep("scheme"); }),
       row("Зал", p.equipment.length===5 ? "всё есть" : p.equipment.length+" из 5", function(){ editStep("gym"); }),
       row("Здоровье", listOf((p.limits||[]).concat(p.redflags||[])), function(){ editStep("health"); }),
       row("Акцент", p.emphasis && p.emphasis.length ? p.emphasis.length+" "+plural(p.emphasis.length,"группа","группы","групп") : "нет", function(){ editStep("emphasis"); }))));
@@ -1427,10 +1432,18 @@ var STEPS={
     var sel=d.scheme==="bro_ant"||d.scheme==="bro_syn" ? "split" : (d.scheme||"auto");
     var out=[options(schemeOptions(d.days||3), sel, function(v){
       d.scheme = v==="split" ? (d.scheme==="bro_syn" ? "bro_syn" : "bro_ant") : v; save(); renderWizardBody(); })];
-    if(sel==="split"){
-      var sub=segField("Грудь в один день", [["bro_ant","с бицепсом"],["bro_syn","с трицепсом"]], d.scheme, function(v){ d.scheme=v; save(); renderWizardBody(); });
-      out.push(sub);
-      setTimeout(function(){ var r=sub.getBoundingClientRect(), lim=window.innerHeight-120; if(r.bottom>lim) window.scrollBy({top:r.bottom-lim, behavior:reduceMotion()?"auto":"smooth"}); }, 0);
+    var subs=[];
+    if(sel==="split") subs.push(segField("Грудь в один день", [["bro_ant","с бицепсом"],["bro_syn","с трицепсом"]], d.scheme, function(v){ d.scheme=v; save(); renderWizardBody(); }));
+    if(sel==="upper" && upperSplitValid("bro_ant", d.days||3)){
+      var how=d.upperSplit ? "groups" : "whole";
+      subs.push(segField("Как делить верх", [["whole","Целиком"],["groups","По группам"]], how, function(v){
+        d.upperSplit = v==="groups" ? (d.upperSplit||"bro_ant") : null; save(); renderWizardBody(); }));
+      if(how==="groups") subs.push(segField("Грудь в один день", [["bro_ant","с бицепсом"],["bro_syn","с трицепсом"]], d.upperSplit, function(v){ d.upperSplit=v; save(); renderWizardBody(); }));
+    }
+    if(subs.length){
+      out=out.concat(subs);
+      var last=subs[subs.length-1];
+      setTimeout(function(){ var r=last.getBoundingClientRect(), lim=window.innerHeight-120; if(r.bottom>lim) window.scrollBy({top:r.bottom-lim, behavior:reduceMotion()?"auto":"smooth"}); }, 0);
     }
     return out;
   }, check:function(){ return {}; }},
@@ -1491,13 +1504,16 @@ function wizBack(){
   S.step="welcome"; save(); render();
 }
 
+function upperSplitValid(u, days){ return !!u && FORGE.splitOptionsFor(days, false).indexOf(u)>=0; }
 function buildProgram(p){
+  var split=p.scheme==="upper" ? (upperSplitValid(p.upperSplit, p.days) ? p.upperSplit : "upper") : (p.scheme||"auto");
   S.program=FORGE.generateProgram({level:p.level, days:p.days, minutes:p.minutes, goal:p.goal, legs:p.scheme!=="upper",
-    emphasis:p.emphasis||[], equipment:p.equipment, limits:p.limits||[], split:p.scheme||"auto"});
+    emphasis:p.emphasis||[], equipment:p.equipment, limits:p.limits||[], split:split});
 }
 function profileFrom(d){
   return {sex:d.sex, age:d.age, height:d.height, weight:d.weight, bodyfat:d.bodyfat||null,
     level:d.level, goal:d.goal, days:d.days, minutes:d.minutes, scheme:d.scheme||"auto",
+    upperSplit:d.scheme==="upper" && upperSplitValid(d.upperSplit, d.days) ? d.upperSplit : null,
     equipment:d.equipment && d.equipment.length ? d.equipment : EQUIP.map(function(o){ return o[0]; }),
     limits:d.limits||[], redflags:d.redflags||[], emphasis:d.emphasis||[],
     activity:d.activity||"light", nutgoal:d.nutgoal||nutgoalFor(d.goal), nutgoalSet:!!d.nutgoalSet, meals:d.meals||4, restrictions:d.restrictions||[]};
@@ -1626,7 +1642,7 @@ function updateTopbar(){
   if(!bar) return;
   if(!head || S.step!=="app"){ bar.className=""; return; }
   var r=head.querySelector(".head-title").getBoundingClientRect();
-  bar.className=r.top<0 ? "on" : "";
+  bar.className=r.top<0 ? "is-on" : "";
 }
 function renderTopbar(){
   var bar=$("topbar"); if(!bar) return;

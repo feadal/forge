@@ -120,7 +120,7 @@ noscript{display:block;padding:24px var(--m)}
 /* ---------- header ---------- */
 #topbar{position:fixed;left:0;right:0;top:0;z-index:15;pointer-events:none;opacity:0;visibility:hidden;transform:translateY(-6px);
   transition:opacity .18s ease-out, transform .18s ease-out, visibility 0s linear .18s}
-#topbar.on{opacity:1;visibility:visible;transform:none;pointer-events:auto;transition-delay:0s}
+#topbar.is-on{opacity:1;visibility:visible;transform:none;pointer-events:auto;transition-delay:0s}
 .topbar-in{position:relative;display:grid;grid-template-columns:44px 1fr 44px;align-items:center;width:100%;max-width:520px;margin:0 auto;
   padding:max(env(safe-area-inset-top), 8px) 8px 4px;min-height:52px;
   background:var(--glass);-webkit-backdrop-filter:blur(20px) saturate(1.2);backdrop-filter:blur(20px) saturate(1.2)}
@@ -187,7 +187,7 @@ noscript{display:block;padding:24px var(--m)}
 .act-bar + .entry{margin-top:0}
 .pocket{display:inline-flex;align-items:baseline;gap:4px;padding:8px 14px;border-radius:var(--r-field);background:var(--pocket);min-height:64px;min-width:64px;justify-content:center}
 .fig{font-size:56px;line-height:52px;font-weight:800;letter-spacing:-.04em}
-.fig.ghost{color:var(--ghost);font-weight:400;letter-spacing:-.03em}
+.fig.is-ghost{color:var(--ghost);font-weight:400;letter-spacing:-.03em}
 .fig.is-long{font-size:48px;line-height:48px}
 .unit{font-size:17px;line-height:22px;font-weight:600;color:var(--ink-2);letter-spacing:-.02em}
 .times{font-size:28px;line-height:34px;color:var(--ink-3)}
@@ -216,7 +216,7 @@ noscript{display:block;padding:24px var(--m)}
 
 /* ---------- dock: session pill, rest platform, tab bar ---------- */
 #dock{position:fixed;left:0;right:0;bottom:0;z-index:20;display:none;pointer-events:none}
-#dock.on{display:flex;flex-direction:column;gap:8px;padding:0 var(--m) var(--safe-b);max-width:520px;margin:0 auto}
+#dock.is-on{display:flex;flex-direction:column;gap:8px;padding:0 var(--m) var(--safe-b);max-width:520px;margin:0 auto}
 #dock > *{pointer-events:auto}
 .dock-fade{position:absolute;z-index:-1;pointer-events:none!important;left:0;right:0;bottom:0;top:-44px;
   background:linear-gradient(to bottom, transparent, var(--ground) 44px)}
@@ -254,19 +254,19 @@ noscript{display:block;padding:24px var(--m)}
   color:var(--ink-2);font-size:11px;line-height:13px;font-weight:600;letter-spacing:0}
 .tab .ic{width:26px;height:26px}
 .tab .ic svg{stroke-width:1.6}
-.tab.on{background:var(--tab-on);color:var(--ink);box-shadow:0 1px 3px rgba(var(--shade),.08)}
+.tab.is-on{background:var(--tab-on);color:var(--ink);box-shadow:0 1px 3px rgba(var(--shade),.08)}
 
 /* ---------- sheet ---------- */
 #sheet{position:fixed;inset:0;z-index:40;display:none}
-#sheet.open{display:block}
+#sheet.is-open{display:block}
 .scrim{position:absolute;inset:0;background:var(--scrim)}
 .sheet{position:absolute;left:0;right:0;bottom:0;max-width:520px;margin:0 auto;max-height:92svh;overflow:auto;
   background:var(--sheet);border-radius:var(--r-sheet) var(--r-sheet) 0 0;
   padding:8px var(--m) calc(var(--safe-b) + 8px);box-shadow:0 -12px 40px rgba(var(--shade),.12);
   transition:transform .25s cubic-bezier(.2,.8,.2,1);touch-action:pan-y}
 @media (prefers-reduced-motion: no-preference){
-  #sheet.open .sheet{animation:sheet-up .38s cubic-bezier(.2,.8,.2,1) both}
-  #sheet.open .scrim{animation:fade .25s ease-out both}
+  #sheet.is-open .sheet{animation:sheet-up .38s cubic-bezier(.2,.8,.2,1) both}
+  #sheet.is-open .scrim{animation:fade .25s ease-out both}
 }
 @keyframes sheet-up{from{transform:translateY(40%);opacity:.4}}
 @keyframes fade{from{opacity:0}}
@@ -291,9 +291,9 @@ noscript{display:block;padding:24px var(--m)}
 .sheet .prev::before{background:var(--key)}
 .sh-value{display:flex;align-items:center;gap:10px;margin-top:12px}
 .sh-value .pocket{background:var(--key);padding:12px 16px;min-height:88px;align-items:center}
-.sh-value .pocket.focus{background:var(--accent-tint)}
+.sh-value .pocket.is-focus{background:var(--accent-tint)}
 .disp{font-size:72px;line-height:64px;font-weight:800;letter-spacing:-.045em}
-.disp.ghost{color:var(--ghost);font-weight:400;letter-spacing:-.03em}
+.disp.is-ghost{color:var(--ghost);font-weight:400;letter-spacing:-.03em}
 .disp.is-long{font-size:56px;line-height:56px}
 .caret{width:3px;height:56px;border-radius:2px;background:var(--accent);margin:0 2px 0 1px;align-self:center}
 @media (prefers-reduced-motion: no-preference){ .caret{animation:blink 1.1s steps(1) infinite} }
@@ -484,12 +484,12 @@ button.row:active{background:var(--band)}
 #toast{position:fixed;left:50%;bottom:calc(var(--dock) + 12px);z-index:50;transform:translate(-50%,8px);opacity:0;pointer-events:none;
   background:var(--rubber);color:var(--on-rubber);padding:10px 16px;border-radius:20px;font-size:15px;line-height:20px;
   transition:opacity .2s cubic-bezier(.2,.8,.2,1), transform .2s cubic-bezier(.2,.8,.2,1)}
-#toast.show{opacity:1;transform:translate(-50%,0)}
+#toast.is-show{opacity:1;transform:translate(-50%,0)}
 #toast.is-sticky{width:calc(100% - 2 * var(--m));max-width:480px;text-align:center}
 
 /* Windows high contrast: controls get their outlines back */
 @media (forced-colors: active){
-  .go,.pocket,.option,.chip,.seg-item.is-on,.key,.tab.on,.btn{border-color:ButtonText}
+  .go,.pocket,.option,.chip,.seg-item.is-on,.key,.tab.is-on,.btn{border-color:ButtonText}
   .puck.todo i,.marks b,.marks i{background:CanvasText}
   .rk-d,.rk-todo{fill:CanvasText}
   .rk-now{fill:Highlight}
@@ -1409,7 +1409,7 @@ function save(){
 function storageWarning(){
   var t=document.getElementById("toast"); if(!t) return;
   t.textContent="Данные не сохраняются. Разреши сайтам хранить данные в настройках Safari.";
-  t.className="show is-sticky";
+  t.className="is-show is-sticky";
 }
 function normalize(s){
   var f=fresh();
@@ -1686,9 +1686,14 @@ function findExercise(id){
 }
 function shortSplit(name){ return String(name||"").replace(/^Сплит:\s*/,"").replace(/\s*·\s*\d+\s*дн\/нед$/,""); }
 // One spelling for a split everywhere: the questionnaire's words.
+function schemeName(p){
+  if(!p) return "";
+  if(p.scheme==="upper" && p.upperSplit) return "Только верх, грудь с "+(p.upperSplit==="bro_ant" ? "бицепсом" : "трицепсом");
+  return SCHEME_RU[p.scheme]||"";
+}
 function splitTitle(){
   var sch=S.profile && S.profile.scheme;
-  if(sch && sch!=="auto" && SCHEME_RU[sch]) return SCHEME_RU[sch];
+  if(sch && sch!=="auto" && SCHEME_RU[sch]) return schemeName(S.profile);
   return shortSplit(S.program.meta.split).replace(/\s*×\d+$/,"")
     .replace(/Пуш\s*\/\s*Пул\s*\/\s*Ноги/,"Жим, тяга, ноги")
     .replace(/\+\s*Верх\s*\/\s*Низ/,"+ верх и низ")
@@ -1987,7 +1992,7 @@ function renderSheet(){
     btn("sr-only sheet-close", "Закрыть", function(){ closeSheet(); }),
     h("div",{class:"sheet-body"}, sheetFn()));
   root.appendChild(scrim); root.appendChild(panel);
-  root.className="open";
+  root.className="is-open";
   document.documentElement.classList.add("has-sheet");
   setInert(true);
   try{ panel.focus({preventScroll:true}); }catch(e){ panel.focus(); }
@@ -2071,10 +2076,10 @@ function typeLabel(t){ return TYPE_RU[t] || "Обычный"; }
 function slot(state, f, unit){
   var on=state.field===f, v=state[f], ghost=(state.ghost && state.ghost[f]) || !v;
   var shown=v || "0";
-  return h("button",{class:"pocket"+(on?" focus":""), type:"button", "aria-pressed":String(on), "data-fk":"slot-"+f,
+  return h("button",{class:"pocket"+(on?" is-focus":""), type:"button", "aria-pressed":String(on), "data-fk":"slot-"+f,
       "aria-label":(f==="w"?"Вес":"Повторы")+" "+shown+(ghost?", предложено":""),
       onclick:function(){ state.field=f; state.fresh[f]=true; renderSheet(); }},
-    h("span",{class:"disp"+(ghost?" ghost":"")+(shown.replace(",","").length>=4?" is-long":"")}, shown),
+    h("span",{class:"disp"+(ghost?" is-ghost":"")+(shown.replace(",","").length>=4?" is-long":"")}, shown),
     on ? h("span",{class:"caret","aria-hidden":"true"}) : null,
     unit ? h("span",{class:"unit"}, unit) : null);
 }
@@ -2163,14 +2168,14 @@ function renderDock(){
   var root=$("dock"); if(!root) return;
   root.innerHTML="";
   if(S.step!=="app"){ root.className=""; setDockSpace(); return; }
-  root.className="on"+(S.rest?" is-resting":"");
+  root.className="is-on"+(S.rest?" is-resting":"");
   root.appendChild(h("div",{class:"dock-fade","aria-hidden":"true"}));
   if(S.rest) root.appendChild(platform());
   else if(S.session) root.appendChild(sessionPill());
   var tabs=[["train","Тренировка","bar"],["food","Питание","bowl"],["progress","Прогресс","steps"]];
   root.appendChild(h("nav",{class:"tabbar", "aria-label":"Разделы"}, tabs.map(function(t){
     var on=S.tab===t[0];
-    return h("button",{class:"tab"+(on?" on":""), type:"button", "aria-current":on?"page":null,
+    return h("button",{class:"tab"+(on?" is-on":""), type:"button", "aria-current":on?"page":null,
       onclick:function(){ S.tab=t[0]; save(); if(route()) go(""); else render(); }}, icon(on ? t[2]+"On" : t[2]), h("span",null,t[1]));
   })));
   if(S.session || S.rest) tick();
@@ -2212,7 +2217,7 @@ function platform(){
 }
 function setDockSpace(){
   var d=$("dock");
-  var hgt=d && d.className.indexOf("on")===0 ? d.getBoundingClientRect().height : 0;
+  var hgt=d && d.classList.contains("is-on") ? d.getBoundingClientRect().height : 0;
   document.documentElement.style.setProperty("--dock", Math.round(hgt)+"px");
 }
 
@@ -2326,7 +2331,7 @@ function activeSet(p, si){
     var shown=v!=null ? (field==="w" ? (loadKind(p.x)==="bw" && v>0 ? "+" : "")+fmt(v) : String(v)) : (field==="w" && isBarbell(p.x) ? "20" : "—");
     return h("button",{class:"pocket", type:"button", "data-fk":"act-"+p.x.id+"-"+field, onclick:function(){ openPad(p, si, field); },
         "aria-label":(field==="w"?"Вес ":"Повторы ")+shown+(ghost?", предложено":"")+". Изменить"},
-      h("span",{class:"fig"+(ghost||v==null?" ghost":"")+(shown.replace(",","").length>=4?" is-long":"")}, shown),
+      h("span",{class:"fig"+(ghost||v==null?" is-ghost":"")+(shown.replace(",","").length>=4?" is-long":"")}, shown),
       unit ? h("span",{class:"unit"}, unit) : null);
   }
   return h("div",{class:"act", role:"listitem"},
@@ -2684,7 +2689,7 @@ function renderSettings(root){
       row("Опыт", LEVEL_RU[p.level], function(){ editStep("level"); }),
       row("Цель", GOAL_RU[p.goal], function(){ editStep("goal"); }),
       row("Дни и время", p.days+NB+"×"+NB+p.minutes+NB+"мин", function(){ editStep("time"); }),
-      row("Схема", SCHEME_RU[p.scheme]||"", function(){ editStep("scheme"); }),
+      row("Схема", schemeName(p), function(){ editStep("scheme"); }),
       row("Зал", p.equipment.length===5 ? "всё есть" : p.equipment.length+" из 5", function(){ editStep("gym"); }),
       row("Здоровье", listOf((p.limits||[]).concat(p.redflags||[])), function(){ editStep("health"); }),
       row("Акцент", p.emphasis && p.emphasis.length ? p.emphasis.length+" "+plural(p.emphasis.length,"группа","группы","групп") : "нет", function(){ editStep("emphasis"); }))));
@@ -2815,10 +2820,18 @@ var STEPS={
     var sel=d.scheme==="bro_ant"||d.scheme==="bro_syn" ? "split" : (d.scheme||"auto");
     var out=[options(schemeOptions(d.days||3), sel, function(v){
       d.scheme = v==="split" ? (d.scheme==="bro_syn" ? "bro_syn" : "bro_ant") : v; save(); renderWizardBody(); })];
-    if(sel==="split"){
-      var sub=segField("Грудь в один день", [["bro_ant","с бицепсом"],["bro_syn","с трицепсом"]], d.scheme, function(v){ d.scheme=v; save(); renderWizardBody(); });
-      out.push(sub);
-      setTimeout(function(){ var r=sub.getBoundingClientRect(), lim=window.innerHeight-120; if(r.bottom>lim) window.scrollBy({top:r.bottom-lim, behavior:reduceMotion()?"auto":"smooth"}); }, 0);
+    var subs=[];
+    if(sel==="split") subs.push(segField("Грудь в один день", [["bro_ant","с бицепсом"],["bro_syn","с трицепсом"]], d.scheme, function(v){ d.scheme=v; save(); renderWizardBody(); }));
+    if(sel==="upper" && upperSplitValid("bro_ant", d.days||3)){
+      var how=d.upperSplit ? "groups" : "whole";
+      subs.push(segField("Как делить верх", [["whole","Целиком"],["groups","По группам"]], how, function(v){
+        d.upperSplit = v==="groups" ? (d.upperSplit||"bro_ant") : null; save(); renderWizardBody(); }));
+      if(how==="groups") subs.push(segField("Грудь в один день", [["bro_ant","с бицепсом"],["bro_syn","с трицепсом"]], d.upperSplit, function(v){ d.upperSplit=v; save(); renderWizardBody(); }));
+    }
+    if(subs.length){
+      out=out.concat(subs);
+      var last=subs[subs.length-1];
+      setTimeout(function(){ var r=last.getBoundingClientRect(), lim=window.innerHeight-120; if(r.bottom>lim) window.scrollBy({top:r.bottom-lim, behavior:reduceMotion()?"auto":"smooth"}); }, 0);
     }
     return out;
   }, check:function(){ return {}; }},
@@ -2879,13 +2892,16 @@ function wizBack(){
   S.step="welcome"; save(); render();
 }
 
+function upperSplitValid(u, days){ return !!u && FORGE.splitOptionsFor(days, false).indexOf(u)>=0; }
 function buildProgram(p){
+  var split=p.scheme==="upper" ? (upperSplitValid(p.upperSplit, p.days) ? p.upperSplit : "upper") : (p.scheme||"auto");
   S.program=FORGE.generateProgram({level:p.level, days:p.days, minutes:p.minutes, goal:p.goal, legs:p.scheme!=="upper",
-    emphasis:p.emphasis||[], equipment:p.equipment, limits:p.limits||[], split:p.scheme||"auto"});
+    emphasis:p.emphasis||[], equipment:p.equipment, limits:p.limits||[], split:split});
 }
 function profileFrom(d){
   return {sex:d.sex, age:d.age, height:d.height, weight:d.weight, bodyfat:d.bodyfat||null,
     level:d.level, goal:d.goal, days:d.days, minutes:d.minutes, scheme:d.scheme||"auto",
+    upperSplit:d.scheme==="upper" && upperSplitValid(d.upperSplit, d.days) ? d.upperSplit : null,
     equipment:d.equipment && d.equipment.length ? d.equipment : EQUIP.map(function(o){ return o[0]; }),
     limits:d.limits||[], redflags:d.redflags||[], emphasis:d.emphasis||[],
     activity:d.activity||"light", nutgoal:d.nutgoal||nutgoalFor(d.goal), nutgoalSet:!!d.nutgoalSet, meals:d.meals||4, restrictions:d.restrictions||[]};
@@ -3014,7 +3030,7 @@ function updateTopbar(){
   if(!bar) return;
   if(!head || S.step!=="app"){ bar.className=""; return; }
   var r=head.querySelector(".head-title").getBoundingClientRect();
-  bar.className=r.top<0 ? "on" : "";
+  bar.className=r.top<0 ? "is-on" : "";
 }
 function renderTopbar(){
   var bar=$("topbar"); if(!bar) return;
