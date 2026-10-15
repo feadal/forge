@@ -5,7 +5,7 @@ const MUSCLES = ["chest","lats","upback","sdelt","rdelt","biceps","triceps","qua
 const MUSCLE_RU = {
   chest:"Грудь", lats:"Широчайшие", upback:"Верх спины", sdelt:"Средние дельты",
   rdelt:"Задние дельты", biceps:"Бицепс", triceps:"Трицепс", quads:"Квадрицепс",
-  hams:"Бицепс бедра", glutes:"Ягодицы", calves:"Икры", traps:"Трапеции", core:"Кор"
+  hams:"Бицепс бедра", glutes:"Ягодицы", calves:"Икры", traps:"Трапеции", core:"Пресс"
 };
 
 const BASE_VOL = {
@@ -107,7 +107,7 @@ const LIMITS = {
     note:"Кистевые бинты на жимах, лямки на тягах. Нейтральный хват (гантели, канат) вместо прямого грифа. Добавь лёгкие сгибания/разгибания запястий 2×/нед."
   },
   hernia: {
-    ru:"Грыжа (в анамнезе)",
+    ru:"Грыжа в прошлом",
     ban:["rdl","back_squat","hanging_leg_raise","ohp"],
     note:"Без максимальных усилий и натуживания: выдох на усилии, воздух не задерживать. Пресс — только антидвижение (планка), без скручиваний и подъёмов ног в висе."
   },
@@ -228,15 +228,6 @@ function splitOptionsFor(days, legs){
   return out;
 }
 
-function daysOptionsFor(pref, legs){
-  const out = [];
-  for(let d=2; d<=6; d++){
-    if(!pref || pref==="auto"){ out.push(d); continue; }
-    if(splitOptionsFor(d, legs).indexOf(pref) >= 0) out.push(d);
-  }
-  return out.length ? out : [2,3,4,5,6];
-}
-
 function buildFromTemplate(pref, days, legs){
   const t = SPLIT_TPL[pref];
   if(!t) return null;
@@ -257,7 +248,7 @@ function buildFromTemplate(pref, days, legs){
     const key = part[0];
     seen[key] = (seen[key]||0) + 1;
     const many = days > t.parts.length;
-    const label = part[1] + (many ? " " + String.fromCharCode(64+seen[key]) : "");
+    const label = part[1] + (many ? " " + "АБВГДЕ".charAt(seen[key]-1) : "");
     seq.push({name: label, muscles: (tpl[key]||ALL).slice()});
   }
   const label = (days % t.parts.length === 0)
@@ -266,8 +257,7 @@ function buildFromTemplate(pref, days, legs){
   return {name: label, days: seq};
 }
 
-function chooseSplit(days, legs, goal, pref){
-  const U="upper", L="lower", F="full", P="push", Pu="pull", Lg="legs";
+function chooseSplit(days, legs, pref){
   const tpl = { upper: UPPER, lower: GROUP.legs, full: ALL, push: GROUP.push, pull: GROUP.pull.concat("core"), legs: GROUP.legs };
   if(pref && pref!=="auto" && splitOptionsFor(days, legs).indexOf(pref)>=0){
     const built = buildFromTemplate(pref, days, legs);
@@ -276,19 +266,19 @@ function chooseSplit(days, legs, goal, pref){
   let seq;
   if(!legs){
     const u=(k)=>({name:"Верх "+k, muscles:UPPER.concat("core")});
-    if(days<=2) seq=[u("A"),u("B")];
-    else if(days===3) seq=[u("A"),u("B"),u("C")];
-    else if(days===4) seq=[u("A"),u("B"),u("A2"),u("B2")];
-    else if(days===5) seq=[u("A"),u("B"),u("A2"),u("B2"),u("C")];
-    else seq=[u("A"),u("B"),u("A2"),u("B2"),u("A3"),u("B3")];
+    if(days<=2) seq=[u("А"),u("Б")];
+    else if(days===3) seq=[u("А"),u("Б"),u("В")];
+    else if(days===4) seq=[u("А"),u("Б"),u("А2"),u("Б2")];
+    else if(days===5) seq=[u("А"),u("Б"),u("А2"),u("Б2"),u("В")];
+    else seq=[u("А"),u("Б"),u("А2"),u("Б2"),u("А3"),u("Б3")];
     return {name:"Только верх ×"+days, days:seq};
   }
   const mk=(key,label)=>({name:label, muscles:tpl[key].slice()});
-  if(days<=2){ seq=[mk("full","Всё тело A"),mk("full","Всё тело B")]; return splitName("Фулбади ×2",seq); }
-  if(days===3){ seq=[mk("full","Всё тело A"),mk("full","Всё тело B"),mk("full","Всё тело C")]; return splitName("Фулбади ×3",seq); }
-  if(days===4){ seq=[mk("upper","Верх A"),mk("lower","Низ A"),mk("upper","Верх B"),mk("lower","Низ B")]; return splitName("Верх/Низ ×2",seq); }
+  if(days<=2){ seq=[mk("full","Всё тело А"),mk("full","Всё тело Б")]; return splitName("Фулбади ×2",seq); }
+  if(days===3){ seq=[mk("full","Всё тело А"),mk("full","Всё тело Б"),mk("full","Всё тело В")]; return splitName("Фулбади ×3",seq); }
+  if(days===4){ seq=[mk("upper","Верх А"),mk("lower","Низ А"),mk("upper","Верх Б"),mk("lower","Низ Б")]; return splitName("Верх/Низ ×2",seq); }
   if(days===5){ seq=[mk("push","Жим (пуш)"),mk("pull","Тяга (пул)"),mk("legs","Ноги"),mk("upper","Верх"),mk("lower","Низ")]; return splitName("Пуш/Пул/Ноги + Верх/Низ",seq); }
-  seq=[mk("push","Жим A"),mk("pull","Тяга A"),mk("legs","Ноги A"),mk("push","Жим B"),mk("pull","Тяга B"),mk("legs","Ноги B")];
+  seq=[mk("push","Жим А"),mk("pull","Тяга А"),mk("legs","Ноги А"),mk("push","Жим Б"),mk("pull","Тяга Б"),mk("legs","Ноги Б")];
   return splitName("Пуш/Пул/Ноги ×2",seq);
 }
 function splitName(name,days){ return {name, days}; }
@@ -342,8 +332,8 @@ function repScheme(goal, ex, isMain){
 }
 
 function pickExercises(muscle, nsets, eqSet, usedPat, goal, rot, banned){
+  // Banned moves never come back: with no safe option the muscle is skipped for the day.
   let pool = EX.filter(e=> e.m===muscle && e.eq.some(x=>eqSet.has(x)) && !(banned && banned.has(e.id)));
-  if(!pool.length) pool = EX.filter(e=> e.m===muscle && e.eq.some(x=>eqSet.has(x)));
   const score = (e)=> (e.t==="comp"?2:0) + (e.stretch?1:0);
   pool.sort((a,b)=> score(b)-score(a));
   if(rot && pool.length>1){
@@ -364,12 +354,12 @@ function pickExercises(muscle, nsets, eqSet, usedPat, goal, rot, banned){
     usedPat.add(e.pat);
     const isMain = out.length===0 && e.t==="comp";
     const rs = repScheme(goal, e, isMain);
-    out.push({id:e.id, name:e.n, muscle, sets:perEx[i]||need, reps:rs.reps, rir:rs.rir, cue:e.cue, stretch:!!e.stretch, type:e.t});
+    out.push({id:e.id, name:e.n, muscle, sets:perEx[i]||need, reps:rs.reps, rir:rs.rir, cue:e.cue, stretch:!!e.stretch, type:e.t, eq:e.eq.slice()});
     i++;
   }
   if(out.length===0 && pool.length){
     const e=pool[0]; const rs=repScheme(goal,e,e.t==="comp");
-    out.push({id:e.id,name:e.n,muscle,sets:need,reps:rs.reps,rir:rs.rir,cue:e.cue,stretch:!!e.stretch,type:e.t});
+    out.push({id:e.id,name:e.n,muscle,sets:need,reps:rs.reps,rir:rs.rir,cue:e.cue,stretch:!!e.stretch,type:e.t,eq:e.eq.slice()});
   }
   return out;
 }
@@ -377,7 +367,7 @@ function pickExercises(muscle, nsets, eqSet, usedPat, goal, rot, banned){
 function generateProgram(input){
   input = Object.assign({level:"int", days:4, minutes:75, goal:"hyp", legs:true, emphasis:[], exclude:[]}, input||{});
   input.days = clamp(input.days,2,6);
-  const split = chooseSplit(input.days, input.legs, input.goal, input.split);
+  const split = chooseSplit(input.days, input.legs, input.split);
   const vol = weeklyVolume(input);
 
   const dayCount = {};
@@ -389,6 +379,7 @@ function generateProgram(input){
   const eqSet = new Set(input.equipment && input.equipment.length ? input.equipment : ["bb","db","cable","machine","bw"]);
   const banned = new Set();
   (input.limits||[]).forEach(k=>{ const L=LIMITS[k]; if(L) L.ban.forEach(id=>banned.add(id)); });
+  const skipped = new Set();
 
   const days = split.days.map((d, di)=>{
     const usedPat = new Set();
@@ -428,6 +419,7 @@ function generateProgram(input){
       if(want[m] < 2) continue;
       if(items.length >= maxEx) break;
       const chosen = pickExercises(m, want[m], eqSet, usedPat, input.goal, di, banned);
+      if(!chosen.length) skipped.add(m);
       for(const c of chosen){
         if(items.length >= maxEx) break;
         c.sets = clamp(c.sets, 2, 5);
@@ -447,10 +439,11 @@ function generateProgram(input){
     weeklyVolume:achieved,
     target:vol,
     progression: input.goal==="str"
-      ? "Линейно-волновая: на главных базовых добавляй ~2.5 кг когда выбил все подходы в верхе диапазона при RIR 2. Аксессуары — двойная прогрессия."
+      ? "Все подходы сделаны в верхе диапазона и в запасе ещё 2 повтора — добавь 2,5 кг на базе. В подсобке сначала добавляй повторы, потом вес."
       : input.goal==="cut"
-      ? "На сушке цель — УДЕРЖАТЬ веса, а не расти. Держи прежние килограммы на базе; если вес на штанге падает 2 тренировки подряд — режь дефицит, а не подходы. Прибавка веса на изоляции — бонус, не требование."
-      : "Двойная прогрессия: держи диапазон повторов, добавляй по повтору; выбил верх во всех подходах при RIR ≤1 → +вес (2.5 кг база / 1–2 кг изоляция). Делоад на 7–8 неделе.",
+      ? "Держи прежние веса на базе. Если вес на штанге падает две тренировки подряд, уменьши дефицит в еде, а не подходы."
+      : "Добавляй по повтору в рамках диапазона. Выбил верх во всех подходах — прибавь вес: 2,5 кг на базе, 1–2 кг на изоляции.",
+    skipped: MUSCLES.filter(m=> skipped.has(m) && !achieved[m]),
     notes: buildNotes(input, split, achieved, vol),
     limitNotes: (input.limits||[]).map(k=> LIMITS[k] ? {title:LIMITS[k].ru, note:LIMITS[k].note} : null).filter(Boolean)
   };
@@ -458,19 +451,20 @@ function generateProgram(input){
 
 function buildNotes(input, split, achieved, target){
   const notes=[];
-  notes.push("Сплит: "+split.name+" — "+input.days+" дн/нед.");
-  if(!input.legs) notes.push("Ноги исключены по твоему выбору — программа только на верх.");
-  const emph=(input.emphasis||[]).map(m=>MUSCLE_RU[m]).filter(Boolean);
-  if(emph.length) notes.push("Акцент: "+emph.join(", ")+" (объём поднят).");
-  notes.push(input.goal==="str"?"Цель — сила: мало повторов на базе, больше отдых (3–5 мин), техника в приоритете."
-    : input.goal==="hybrid"?"Цель — сила+масса: тяжёлая база в 4–6 + гипертрофийная подсобка."
-    : input.goal==="cut"?"Цель — сушка: база остаётся тяжёлой (5–8 повторов) — это защищает мышцы в дефиците. Изоляция уходит в 12–20 повторов. Объём чуть снижен: в дефиците восстановление хуже."
-    : "Цель — гипертрофия: 6–15 повторов, RIR 0–2, отдых 1.5–3 мин.");
+  if(!input.legs) notes.push("Ноги исключены: программа только на верх.");
+  // The same words the questionnaire used for these choices.
+  const EMPH_RU={chest:"грудь", lats:"спина", sdelt:"плечи", biceps:"бицепс", triceps:"трицепс", quads:"ноги", glutes:"ягодицы", core:"пресс"};
+  const emph=(input.emphasis||[]).map(m=>EMPH_RU[m]||MUSCLE_RU[m]).filter(Boolean);
+  if(emph.length) notes.push("Акцент: "+emph.join(", ")+". Объём на них выше.");
+  notes.push(input.goal==="str"?"Сила: мало повторов на базе, отдых 3–5 минут, техника важнее веса."
+    : input.goal==="hybrid"?"Сила и масса: тяжёлая база на 4–6 повторов и подсобка на рост мышц."
+    : input.goal==="cut"?"Сушка: база остаётся тяжёлой, 5–8 повторов, чтобы сохранить мышцы. Изоляция на 12–20 повторов. Объём чуть ниже: в дефиците восстановление хуже."
+    : "Масса: 6–15 повторов, отдых 1,5–3 минуты.");
   if(input.goal==="cut"){
-    notes.push("Кардио: 2–3 сессии по 20–30 мин или 8–10 тыс. шагов в день. Не заменяй им дефицит в еде — кардио дополняет, а не отменяет.");
-    notes.push("Главный маркер, что сушка идёт правильно: вес падает, а веса на штанге стоят.");
+    notes.push("Кардио: 2–3 раза по 20–30 минут или 8–10 тысяч шагов в день. Дефицит в еде оно не заменяет.");
+    notes.push("Сушка идёт правильно, если вес тела падает, а веса на штанге держатся.");
   }
   return notes;
 }
 
-if(typeof module!=="undefined") module.exports = {generateProgram, MUSCLE_RU, MUSCLES, EX, LIMITS, SPLIT_TPL, splitOptionsFor, daysOptionsFor};
+if(typeof module!=="undefined") module.exports = {generateProgram, MUSCLE_RU, MUSCLES, EX, LIMITS, SPLIT_TPL, splitOptionsFor};

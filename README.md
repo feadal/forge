@@ -1,133 +1,74 @@
 <div align="center">
 
-<img src="icon.svg" width="104" alt="FORGE">
+<img src="icon.svg" width="96" alt="FORGE">
 
 # FORGE
 
-**Конструктор тренировок и питания, который работает в зале**
+**A workout program and meal plan made for you, then a log for the gym.**
 
-Отвечаешь на анкету — получаешь программу и рацион, собранные под тебя.
-Дальше это тренировочный дневник: подход логируется одним тапом, таймер отдыха не умирает при блокировке экрана.
+English · [Русский](README.ru.md)
 
-Офлайн, без регистрации, без сервера. Данные не покидают устройство.
+[Open the app](https://feadal.github.io/forge/) (the interface is in Russian)
+
+<img src="screenshots/train.png" width="240" alt="Workout: the current set with the loaded bar"> <img src="screenshots/rest.png" width="240" alt="Rest: time runs down the knurling of the bar"> <img src="screenshots/progress.png" width="240" alt="Progress: estimated one-rep max">
 
 </div>
 
----
+## What it does
 
-## Что это
+A questionnaire of 9 short screens builds an 8-week program. The app picks a split for you (full body, upper/lower, push/pull/legs or a body-part split) or uses the one you choose. Volume, phases and exercises follow your experience, goal, training days, equipment and injuries.
 
-Большинство генераторов программ выдают одну и ту же схему всем подряд, а трекеры требуют вбивать веса заново каждую тренировку. FORGE делает и то, и другое: считает программу алгоритмами под твои данные — и логирует её так, чтобы между подходами не залипать в телефоне.
+In the gym a set takes one tap: weight and reps are already filled in from your previous set or from last week. To change them there is a custom keypad with 2.5 kg steps. The app also tells warm-up, drop and to-failure sets apart.
 
-Никакого ИИ в рантайме и ни одного запроса в сеть. Вся логика — детерминированные правила, зашитые в приложение, поэтому оно одинаково работает в подвале зала без связи и дома по Wi-Fi.
+The current set is drawn. At 72.5 kg you see what to load: 20, 5 and 1.25 per side. Dumbbells, cable stacks and weighted pull-ups get their own drawings.
 
-## Программа
+During rest the knurling on the drawn bar runs down with the time. The timer counts from a timestamp, so a locked screen does not reset it. The screen stays awake during a workout, and a chime marks the end of rest.
 
-**Анкета из 19 вопросов** — параметры, стаж, цель, дни, время, инвентарь, травмы, ограничения в еде. Часть вопросов показывается по условию: спросил про сплит только тем, кто выбрал сплит.
+After a workout the app shows your records, and the Progress tab has an estimated one-rep max for every exercise.
 
-**Выбор системы тренировок.** Сплит по группам — по антагонистам (грудь+бицепс, спина+трицепс) или по синергистам (грудь+трицепс, спина+бицепс), пуш/пул/ноги, фулбади, верх/низ, только верх. Или автоподбор. Количество дней фильтруется под выбранную схему, так что невозможных сочетаний не возникает.
+Nutrition covers calories, protein, fat, carbs and a daily menu. The menu respects 16 restrictions, from allergies and intolerances to vegetarian diets.
 
-**Четыре цели** — масса, сушка, сила, сила+масса. Меняют не только повторы, но и объём, RIR и логику прогрессии. На сушке база остаётся тяжёлой (5–8 повторов): в дефиците это главный механизм сохранения мышц.
+If you have an injury, risky exercises stay out of the program. If you report warning symptoms in the questionnaire, the app sends you to a doctor first.
 
-**Подбор упражнений** из базы на 42 движения: без дублирующих паттернов, с приоритетом растянутой позиции, с жёстким потолком по времени — от 4 упражнений на 45 минут до 7 на 90.
+## Install
 
-**Периодизация на 8 недель** — вкатывание (режет и число упражнений, и подходы) → разгон → пик → делоад → проходка.
+Open [feadal.github.io/forge](https://feadal.github.io/forge/) and add it to your home screen.
 
-## Безопасность
+- iPhone: in Safari tap Share, then Add to Home Screen.
+- Android: in Chrome open the menu and tap Install app.
 
-**Учёт травм.** Семь проблемных зон: поясница, колени, плечи, локти, запястья, таз, грыжа. Программа исключает опасные движения и подставляет замены на ту же мышцу — тяга с упором в лавку вместо тяги штанги, жим ногами вместо приседа. К каждой отметке идёт практическая памятка.
+The first launch needs an internet connection. After that the app works offline.
 
-**Красные флаги.** Боль в покое или ночью, онемение, свежая травма, выпирание в паху, заклинивание сустава — программа не выдаётся, приложение отправляет к врачу.
+## Privacy
 
-**Границы дефицита.** Калории не опускаются ниже безопасного минимума, даже если так просит расчёт.
+The app has no server and no accounts, and it makes no network requests. Your profile, program and workout history stay on your phone, in `localStorage`.
 
-## Тренировка
+## Evidence behind the rules
 
-Строка подхода устроена так, чтобы обычный подход закрывался **одним тапом**:
+- 10 to 20 hard sets per muscle per week, with each muscle trained twice a week: Schoenfeld's meta-analyses.
+- Exercises loaded at long muscle lengths come first: Maeo, 2023.
+- Protein at 1.6 to 2.2 g per kg of body weight: the ISSN position stand and Morton's 2018 meta-analysis.
+- In trained lifters, stopping 1 or 2 reps short of failure builds as much muscle as going to failure.
+- On a cut, heavy compound work keeps muscle in a deficit.
+- Exercise swaps for injuries follow clinical guidelines.
 
-```
-[Р] [≈20]  [ 20 кг] [ 8 повт] [✓]   разминка
-[1] [42×9] [ 42 кг] [ 9 повт] [✓]
-[2] [42×8] [ 42 кг] [ 8 повт] [✓]
-```
-
-- **Прошлый результат — кнопка.** Тап подставляет вес и повторы разом.
-- **Поля предзаполнены** прошлыми значениями бледным; галочка их фиксирует.
-- **Тап по полю выделяет значение** — первая цифра заменяет старое.
-- **Тап по номеру** переключает тип подхода: разминочный, дроп-сет, до отказа.
-- **Разминочный подход есть в каждом упражнении** отдельной строкой, с подсказкой веса (≈50% рабочего) и коротким отдыхом. В тоннаж и рекорды не идёт.
-
-**Таймер отдыха** запускается сам и считает от метки времени, а не тиков, — поэтому переживает блокировку экрана и выгрузку приложения из памяти. Экран во время тренировки не гаснет, в конце отдыха звучит сигнал.
-
-**Сверху** — сегментированное кольцо подходов, живой тоннаж и секундомер тренировки.
-
-**После «Завершить»** — сводка: тоннаж, подходы, упражнения, автоматически найденные личные рекорды и оценка усилия 1–10.
-
-## Питание
-
-**Расчёт нормы:** BMR по Миффлину–Сан Жеору или Кетчу–МакАрдлу (если знаешь % жира) → TDEE по активности → цель под сушку, набор, рекомпозицию или поддержание.
-
-**Макросы** с белком 2.0–2.4 г/кг в зависимости от цели и типа питания, жирами не ниже физиологического минимума.
-
-**Готовое меню** по приёмам пищи с граммовками из базы на 50 продуктов. Порции подгоняются солвером — попадание в цель по калориям ±3%.
-
-**16 ограничений** — и это не вычёркивание, а пересборка рациона с предупреждениями:
-
-| | |
-|---|---|
-| **Аллергии** | молоко, яйца, арахис, орехи, соя, рыба, морепродукты |
-| **Непереносимости** | лактоза (творог и твёрдый сыр остаются), глютен, целиакия, FODMAP |
-| **Диеты** | вегетарианство, веганство, пескетарианство, без свинины, без говядины |
-
-Веганам поднимает белок и напоминает про B12, креатин и омега-3. На сушке подсказывает про рефиды и правила корректировки.
-
-## На чём построено
-
-Правила движка собраны из доказательной базы:
-
-- объём 10–20 подходов на мышцу в неделю, частота 2× — метаанализы Schoenfeld;
-- приоритет упражнений в растянутой позиции — Maeo (2023): разгибания из-за головы дали +19.9% против +13.5%;
-- белок 1.6–2.2 г/кг — позиция ISSN и метаанализ Morton (2018);
-- RIR 1–2 не хуже отказа для гипертрофии у тренированных;
-- на сушке тяжёлая база сохраняет мышцы в дефиците;
-- таблица замен при травмах — на основе клинических рекомендаций.
-
-Интерфейс тоже не выдуман: разбор 11 908 отрицательных отзывов на Hevy, Strong, Fitbod, JEFIT и Boostcamp показал, что таймер, умирающий при блокировке экрана, — самый частый функциональный дефект в нише (5.6% всех жалоб), а предзаполнение полей из прошлой сессии — главный экономитель времени.
-
-## Приватность
-
-Приложение не имеет сервера и не делает **ни одного** сетевого запроса. Профиль, программа, рацион и логи хранятся в `localStorage` браузера на устройстве. Ничего никуда не отправляется, аккаунт не нужен.
-
-## Установка
-
-Открой страницу и добавь на домашний экран — дальше работает как приложение, в том числе без интернета.
-
-- **iOS:** Safari → «Поделиться» → «На экран „Домой"»
-- **Android:** Chrome → меню → «Установить приложение»
-
-Первый запуск нужен с интернетом: service worker кэширует приложение целиком.
-
-## Что внутри
+## Development
 
 ```
-index.html              собранное приложение — один самодостаточный файл
-sw.js                   service worker: офлайн-кэш
-manifest.webmanifest    манифест PWA
-icon.svg, favicon.svg   знак: наковальня с искрой
-src/                    исходники движков и сборщик
-  engine.js               тренировки: сплиты, объём, подбор, травмы
-  nutrition.js            питание: калории, макросы, меню, ограничения
-  ui.js                   интерфейс и трекинг
-  style.css               оформление
-  build.sh                сборка в index.html
+index.html                the built app, a single file
+sw.js                     service worker, offline cache
+manifest.webmanifest      PWA manifest
+src/
+  engine.js               training: splits, volume, exercise selection, injuries
+  nutrition.js            nutrition: calories, macros, menu, restrictions
+  ui.js                   interface and log
+  style.css               styles
+  index.template.html     page template
+  build.sh                builds index.html
 ```
 
-## Оговорка
+Build with `bash src/build.sh`. There are no dependencies.
 
-FORGE — инструмент планирования, а не медицинская рекомендация. Он не заменяет врача, диетолога и тренера. Если есть заболевания, травмы или ты принимаешь лекарства, согласуй программу и питание со специалистом.
+## Disclaimer
 
----
-
-<div align="center">
-<sub>Сделано для себя. Пользуйся, если пригодится.</sub>
-</div>
+FORGE helps you plan. It does not replace a doctor, a dietitian or a coach. If you have a condition or an injury, or take medication, check the program and the meal plan with a specialist.

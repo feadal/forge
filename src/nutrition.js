@@ -3,7 +3,7 @@
 const FOODS = [
   {id:"chicken_breast", ru:"Куриная грудка", cat:"protein", kcal:165, p:31, f:3.6, c:0, fib:0, tags:[], slot:"main", cost:1, prep:"cook"},
   {id:"turkey_fillet", ru:"Филе индейки", cat:"protein", kcal:150, p:29, f:3, c:0, fib:0, tags:[], slot:"main", cost:2, prep:"cook"},
-  {id:"beef_mince_5", ru:"Говяжий фарш 5%", cat:"protein", kcal:150, p:21, f:7, c:0, fib:0, tags:["beef"], slot:"main", cost:2, prep:"cook"},
+  {id:"beef_mince_5", ru:"Говяжий фарш 5 %", cat:"protein", kcal:150, p:21, f:7, c:0, fib:0, tags:["beef"], slot:"main", cost:2, prep:"cook"},
   {id:"pork_lean", ru:"Свинина нежирная", cat:"protein", kcal:180, p:21, f:10, c:0, fib:0, tags:["pork"], slot:"main", cost:2, prep:"cook"},
   {id:"cod", ru:"Треска", cat:"protein", kcal:82, p:18, f:0.7, c:0, fib:0, tags:["fish"], slot:"main", cost:2, prep:"cook"},
   {id:"mackerel", ru:"Скумбрия", cat:"protein", kcal:191, p:18, f:13, c:0, fib:0, tags:["fish"], slot:"main", cost:1, prep:"cook"},
@@ -12,11 +12,11 @@ const FOODS = [
   {id:"shrimp", ru:"Креветки", cat:"protein", kcal:99, p:24, f:0.3, c:0, fib:0, tags:["shellfish"], slot:"main", cost:3, prep:"cook"},
   {id:"eggs", ru:"Яйца куриные", cat:"protein", kcal:143, p:13, f:10, c:0.7, fib:0, tags:["egg"], slot:"am,snack", cost:1, prep:"cook"},
   {id:"egg_whites", ru:"Яичные белки", cat:"protein", kcal:52, p:11, f:0.2, c:0.7, fib:0, tags:["egg"], slot:"am", cost:2, prep:"cook"},
-  {id:"cottage_cheese", ru:"Творог 5%", cat:"protein", kcal:121, p:17, f:5, c:3, fib:0, tags:["milk","lactose_low"], slot:"am,snack,night", cost:1, prep:"none"},
+  {id:"cottage_cheese", ru:"Творог 5 %", cat:"protein", kcal:121, p:17, f:5, c:3, fib:0, tags:["milk","lactose_low"], slot:"am,snack,night", cost:1, prep:"none"},
   {id:"cottage_cheese_0", ru:"Творог обезжиренный", cat:"protein", kcal:71, p:16, f:0.6, c:1.8, fib:0, tags:["milk","lactose_low"], slot:"am,snack,night", cost:1, prep:"none"},
   {id:"greek_yogurt", ru:"Греческий йогурт", cat:"protein", kcal:59, p:10, f:0.4, c:3.6, fib:0, tags:["milk","lactose_low"], slot:"am,snack,night", cost:2, prep:"none"},
-  {id:"kefir", ru:"Кефир 1%", cat:"protein", kcal:40, p:3, f:1, c:4, fib:0, tags:["milk","lactose_low"], slot:"am,snack,night", cost:1, prep:"none"},
-  {id:"milk", ru:"Молоко 2.5%", cat:"protein", kcal:52, p:2.8, f:2.5, c:4.7, fib:0, tags:["milk","lactose"], slot:"am,snack", cost:1, prep:"none"},
+  {id:"kefir", ru:"Кефир 1 %", cat:"protein", kcal:40, p:3, f:1, c:4, fib:0, tags:["milk","lactose_low"], slot:"am,snack,night", cost:1, prep:"none"},
+  {id:"milk", ru:"Молоко 2,5 %", cat:"protein", kcal:52, p:2.8, f:2.5, c:4.7, fib:0, tags:["milk","lactose"], slot:"am,snack", cost:1, prep:"none"},
   {id:"hard_cheese", ru:"Сыр твёрдый", cat:"protein", kcal:364, p:25, f:29, c:0, fib:0, tags:["milk","lactose_low"], slot:"am,snack", cost:2, prep:"none"},
   {id:"whey", ru:"Сывороточный протеин", cat:"protein", kcal:400, p:80, f:5, c:8, fib:0, tags:["milk","supplement"], slot:"am,snack", cost:2, prep:"none"},
   {id:"soy_protein", ru:"Соевый протеин", cat:"protein", kcal:380, p:80, f:2, c:5, fib:2, tags:["soy","supplement","vegan"], slot:"am,snack", cost:2, prep:"none"},
@@ -69,7 +69,7 @@ const RESTRICTIONS = {
   shellfish:    {excludeTags:["shellfish"], note:""},
   vegetarian:   {excludeTags:["fish","shellfish","beef","pork"], excludeCatMeat:true, note:"Молочное и яйца оставлены."},
   vegan:        {excludeTags:["milk","lactose","lactose_low","egg","fish","shellfish","beef","pork"], excludeCatMeat:true,
-                 note:"Белок поднят до 2.2 г/кг (растительный усваивается хуже). Добавь B12, креатин, омега-3 из водорослей."},
+                 note:"Растительный белок усваивается хуже, поэтому норма выше. Добавь B12, креатин и омега-3 из водорослей."},
   pescatarian:  {excludeTags:["beef","pork"], excludeCatMeat:true, keepFish:true, note:"Рыба и морепродукты оставлены."},
   halal:        {excludeTags:["pork"], note:""},
   no_beef:      {excludeTags:["beef"], note:""},
@@ -99,14 +99,32 @@ const ACTIVITY = {
   ath:   {mul:1.9,   ru:"Очень высокая (физическая работа + спорт)"}
 };
 
+// Lifestyle outside the gym; training sessions are added on top (≈+0.025 per weekly session).
+const LIFESTYLE = {
+  sed:   {mul:1.25, ru:"Сидячая работа"},
+  light: {mul:1.35, ru:"Немного хожу"},
+  mod:   {mul:1.45, ru:"Много хожу"},
+  high:  {mul:1.6,  ru:"Физический труд"}
+};
+
+function activityFactor(input){
+  const life = LIFESTYLE[input.activity];
+  if(life && typeof input.trainingDays==="number"){
+    const d = clamp(Math.round(input.trainingDays),0,7);
+    var word = (d>=2 && d<=4) ? "раза" : "раз";
+    return {mul: Math.min(1.9, life.mul + 0.025*d), ru: life.ru+", "+d+"\u00a0"+word+" в\u00a0неделю"};
+  }
+  return ACTIVITY[input.activity] || ACTIVITY.light;
+}
+
 function energy(input){
   const b = bmr(input);
-  const act = ACTIVITY[input.activity] || ACTIVITY.light;
+  const act = activityFactor(input);
   const tdee = b.value*act.mul;
   let target, rate, label;
   switch(input.goal){
-    case "cut":    target = tdee*0.80; rate="−0.5…−0.7 кг/нед"; label="Сушка"; break;
-    case "bulk":   target = tdee*1.10; rate="+0.2…+0.35 кг/нед"; label="Набор массы"; break;
+    case "cut":    target = tdee*0.80; rate="−0,5…−0,7 кг в неделю"; label="Сушка"; break;
+    case "bulk":   target = tdee*1.10; rate="+0,2…+0,35 кг в неделю"; label="Набор массы"; break;
     case "recomp": target = tdee*1.00; rate="вес держится ровно"; label="Рекомпозиция"; break;
     default:       target = tdee;      rate="вес держится ровно"; label="Поддержание";
   }
@@ -357,14 +375,13 @@ function generateNutrition(input){
   const {foods, notes} = allowedFoods(input.restrictions);
   const goalNotes = [];
   if(input.goal==="cut"){
-    goalNotes.push("Белок поднят до "+m.pPerKg+" г/кг — в дефиците это главная защита мышц.");
-    goalNotes.push("Раз в 7–10 дней сделай рефид: +25–30% калорий углеводами (не жиром). Помогает гормонам, тренировкам и голове.");
-    goalNotes.push("Дефицит ~"+e.deficit+" ккал/день. Если вес не падает 2–3 недели подряд — режь ещё на 150–200 ккал, не больше.");
-    goalNotes.push("Овощи и объёмная еда — твой друг: они дают сытость почти без калорий.");
-    if(e.floored) goalNotes.push("⚠ Расчётный дефицит упирался в безопасный минимум калорий — цель поднята до "+e.target+" ккал.");
+    goalNotes.push("Белок "+String(m.pPerKg).replace(".",",")+" г на кг веса: в дефиците это главная защита мышц.");
+    goalNotes.push("Раз в 7–10 дней делай рефид: плюс 25–30% калорий за счёт углеводов.");
+    goalNotes.push("Если вес не падает 2–3 недели, убери ещё 150–200 ккал, не больше.");
+    goalNotes.push("Овощи и объёмная еда дают сытость почти без калорий.");
   }
   if(input.goal==="bulk"){
-    goalNotes.push("Если за 2–3 недели вес стоит — добавь 150–200 ккал углеводами. Растёшь быстрее 0.4 кг/нед — убавь: лишнее уйдёт в жир.");
+    goalNotes.push("Если вес стоит 2–3 недели, добавь 150–200 ккал углеводами. Если прибавляешь больше 0,4 кг в неделю, убавь: лишнее уходит в жир.");
   }
   const day = buildMeals(input, m, foods, input.dayIndex||0);
   const sum = day.meals ? day.meals.reduce((a,x)=>({kcal:a.kcal+x.total.kcal,p:a.p+x.total.p,f:a.f+x.total.f,c:a.c+x.total.c,fib:a.fib+x.total.fib}),{kcal:0,p:0,f:0,c:0,fib:0}) : null;
@@ -372,14 +389,14 @@ function generateNutrition(input){
   const fitNotes = [];
   if(actual){
     if(actual.p < m.protein*0.9){
-      fitNotes.push("Не удалось разложить весь белок по "+(input.meals||4)+" приёмам — не хватает "+(m.protein-actual.p)+" г. "+
-        (input.meals<=4 ? "Добавь ещё один приём или порцию протеина." : "Добавь порцию протеина между приёмами."));
+      fitNotes.push("Не хватает "+(m.protein-actual.p)+" г белка. "+
+        (input.meals<=4 ? "Добавь приём пищи или порцию протеина." : "Добавь порцию протеина."));
     }
     if(actual.f > m.fat*1.2){
-      fitNotes.push("Жиров вышло больше цели на "+(actual.f-m.fat)+" г — при таких ограничениях источники белка тянут жир за собой. Убери орехи или масло из одного приёма.");
+      fitNotes.push("Жиров на "+(actual.f-m.fat)+" г больше цели. Убери орехи или масло из одного приёма.");
     }
     if(actual.kcal > e.target*1.08){
-      fitNotes.push("Калорий получилось на "+(actual.kcal-e.target)+" больше цели: при твоих ограничениях продукты калорийнее. Урежь порцию гарнира в самом большом приёме.");
+      fitNotes.push("Калорий на "+(actual.kcal-e.target)+" больше цели. Уменьши гарнир в самом большом приёме.");
     }
   }
   return {energy:e, macros:m, restrictionNotes:notes, goalNotes:goalNotes, fitNotes:fitNotes,

@@ -1,12 +1,12 @@
 {
-  "name": "FORGE — конструктор тренировок и питания",
+  "name": "FORGE",
   "short_name": "FORGE",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#fbfbfa",
-  "theme_color": "#fbfbfa",
+  "background_color": "#F7F8FA",
+  "theme_color": "#F7F8FA",
   "icons": [
     {
       "src": "icon-192.png",
