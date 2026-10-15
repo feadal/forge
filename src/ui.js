@@ -9,13 +9,24 @@ function fresh(){
   return {v:2, step:"welcome", draft:{}, wq:0, edit:null, rerun:false,
     profile:null, program:null, nutrition:null, nutI:0,
     log:{}, past:[], cycle:1, sessions:[], week:1, day:0, focus:null, session:null, rest:null, summary:null, undo:null,
-    restCfg:{comp:150, iso:90, warm:60}, restEx:{}, tab:"train"};
+    restCfg:{comp:150, iso:90, warm:60}, restEx:{}, tab:"train", theme:"auto"};
 }
 var mem=null, storageOk=true;
 function load(){ try{ var r=localStorage.getItem(KEY); if(r) return JSON.parse(r); }catch(e){ storageOk=false; } return mem; }
 function save(){
   try{ localStorage.setItem(KEY, JSON.stringify(S)); }
   catch(e){ mem=S; if(storageOk){ storageOk=false; storageWarning(); } }
+}
+// Theme: "auto" follows the phone; "light" or "dark" pins it. The page head applies it before first paint.
+var THEME_BAR={light:"#F7F8FA", dark:"#0E1116"};
+function applyTheme(){
+  var t=S.theme==="light" || S.theme==="dark" ? S.theme : null, root=document.documentElement;
+  if(t) root.setAttribute("data-theme", t); else root.removeAttribute("data-theme");
+  var metas=document.querySelectorAll('meta[name="theme-color"]');
+  for(var i=0;i<metas.length;i++){
+    var dark=/dark/.test(metas[i].getAttribute("media")||"");
+    metas[i].setAttribute("content", THEME_BAR[t || (dark ? "dark" : "light")]);
+  }
 }
 // Without storage everything is lost on close, so say it and keep saying it.
 function storageWarning(){
@@ -1318,6 +1329,9 @@ function renderSettings(root){
         h("b",{class:"stepper-val"}, restLabel(v)),
         btn("step", icon("plus"), function(){ S.restCfg[t[0]]=Math.min(600, v+15); save(); render(); }, {"aria-label":t[1]+": больше, сейчас "+restLabel(v), "data-fk":"rest-"+t[0]+"+"})));
   });
+  root.appendChild(h("section",{class:"group"},
+    segField("Тема", [["auto","Авто"],["light","Светлая"],["dark","Тёмная"]], S.theme||"auto",
+      function(v){ S.theme=v; applyTheme(); save(); render(); })));
   var nEx=Object.keys(S.restEx).length;
   root.appendChild(h("section",{class:"group"},
     h("h2",{class:"section-title"},"Отдых"),
@@ -1328,7 +1342,7 @@ function renderSettings(root){
     btn("btn btn-quiet is-danger", "Удалить все данные", function(){
       confirmSheet({title:"Удалить все данные?", text:"Программа, питание и история тренировок сотрутся с этого телефона.", ok:"Удалить", danger:true, onOk:function(){
         try{ localStorage.removeItem(KEY); }catch(e){}
-        S=fresh(); mem=null; dropAwake(); save(); go(""); render();
+        S=fresh(); mem=null; dropAwake(); applyTheme(); save(); go(""); render();
       }});
     })));
   root.appendChild(h("p",{class:"fine about"}, "Данные хранятся только на этом телефоне."));
@@ -1676,6 +1690,7 @@ document.addEventListener("click", unlockAudio, true);
 document.addEventListener("keydown", function(e){ if(e.key==="Escape" && sheetFn) closeSheet(); });
 window.addEventListener("resize", setDockSpace);
 try{ history.scrollRestoration="manual"; }catch(e){}
+applyTheme();
 if(!storageOk) storageWarning();
 window.FORGE_UI={render:render, state:function(){ return S; }};
 render();

@@ -23,8 +23,9 @@
   --safe-b:max(env(safe-area-inset-bottom), 8px);
   --spring:linear(0, .009, .035 2.1%, .141, .281 6.7%, .723 12.9%, .938 16.7%, 1.017, 1.077 22.5%, 1.111, 1.121 27.1%, 1.106 30.1%, 1.034 37.6%, 1.007 41.9%, .988 47.1%, .996 59.6%, 1);
 }
+/* Dark: follows the phone unless the app is pinned to a theme in Settings. */
 @media (prefers-color-scheme: dark){
-  :root{
+  :root:not([data-theme="light"]){
     --ground:#0E1116; --band:#181C23; --pocket:#222730; --key:#222730; --sheet:#181C23;
     --ink:#EEF1F5; --ink-2:#A3ADBC; --ink-3:#8A94A4; --ghost:#8C97AA; --pending:#6B7587;
     --accent:#5A83EC; --accent-tint:#1E2A47; --on-accent:#0B0F15; --danger:#F97066; --on-danger:#1A0806;
@@ -37,6 +38,20 @@
     --knurl-base:#8C96A5; --knurl-line:#2A313C; --shaft-spent:#2E3540;
   }
 }
+:root[data-theme="dark"]{
+    --ground:#0E1116; --band:#181C23; --pocket:#222730; --key:#222730; --sheet:#181C23;
+    --ink:#EEF1F5; --ink-2:#A3ADBC; --ink-3:#8A94A4; --ghost:#8C97AA; --pending:#6B7587;
+    --accent:#5A83EC; --accent-tint:#1E2A47; --on-accent:#0B0F15; --danger:#F97066; --on-danger:#1A0806;
+    --rubber:#222832;
+    --tab-on:rgba(255,255,255,.13); --ret:#3B4350; --on-ret:#EEF1F5;
+    --grabber:#3A414C; --glass:rgba(30,34,42,.76); --scrim:rgba(0,0,0,.45); --shade:0,0,0;
+    --sel:#2C333F; --seg-on:#3B4350; --slab:#3A414C;
+    --steel:#6E7887; --steel-dark:#C7CED8; --chrome:#8C96A5;
+    --plate-1:#5A83EC; --plate-2:#6A90F0; --plate-3:#7C9DF0; --plate-4:#A5BBF4;
+    --knurl-base:#8C96A5; --knurl-line:#2A313C; --shaft-spent:#2E3540;
+}
+:root[data-theme="light"]{color-scheme:light}
+:root[data-theme="dark"]{color-scheme:dark}
 
 /* ---------- base ---------- */
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
