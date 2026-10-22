@@ -531,8 +531,10 @@ function commitDone(p, si, w, r){
     var nxt=planFor(S.day, S.week).filter(function(q){ return !exProgress(q).complete; })[0];
     S.focus=nxt ? nxt.x.id : p.x.id;
   }
-  var sec=si==="w" ? restFor(p.x,"warm") : restFor(p.x), st=sessionStats();
-  if(sec>0 && st && st.left>0) startRest(sec, k, restNext(p, si)); else S.rest=null;
+  // Rest only if the day still has an open set, counting sets ticked before this session too.
+  var sec=si==="w" ? restFor(p.x,"warm") : restFor(p.x);
+  var open=planFor(S.day, S.week).some(function(q){ return !exProgress(q).complete; });
+  if(sec>0 && open) startRest(sec, k, restNext(p, si)); else S.rest=null;
   reveal="smooth"; save(); render();
 }
 function toggleSet(p, si){
@@ -629,7 +631,7 @@ function focusKey(el){
 }
 function refocus(scope, key){
   if(!key || !scope) return false;
-  var all=scope.querySelectorAll("button,input,[tabindex]");
+  var all=scope.querySelectorAll("button,input,textarea,[tabindex]");
   for(var i=0;i<all.length;i++) if(focusKey(all[i])===key){ try{ all[i].focus({preventScroll:true}); }catch(e){ all[i].focus(); } return true; }
   return false;
 }
@@ -892,7 +894,7 @@ function platform(){
     h("div",{class:"pl-bar", html:barSVG(load, {w:322, h:66, rest:left/S.rest.total, label:"Остаток отдыха"})}),
     h("div",{class:"pl-bottom"},
       h("span",{class:"nx"}, nx ? [nx.title, nx.r!=null ? [" · ", h("b",null, setXR(nx.w, nx.r, nx.x))] : null] : "Последний подход позади"),
-      btn("skip", "Пропустить", stopRest)));
+      btn("skip", "Пропустить", stopRest, {"data-fk":"rest-skip"})));
 }
 function setDockSpace(){
   var d=$("dock");
@@ -1410,7 +1412,7 @@ function renderSettings(root){
     btn("btn btn-quiet", "Пройти анкету заново", rerunWizard),
     btn("btn btn-quiet is-danger", "Удалить все данные", function(){
       confirmSheet({title:"Удалить все данные?", text:"Программа, питание и история тренировок сотрутся с этого телефона.", ok:"Удалить", danger:true, onOk:function(){
-        try{ localStorage.removeItem(KEY); }catch(e){}
+        try{ localStorage.removeItem(KEY); localStorage.removeItem(KEY+"_broken"); }catch(e){}
         S=fresh(); mem=null; dropAwake(); applyTheme(); save(); go(""); render();
       }});
     })));
@@ -1869,7 +1871,8 @@ function render(){
   if(reveal) revealActive(reveal);
   reveal=null;
   renderTopbar();
-  if(fk && !sheetFn && !refocus(document.body, fk)) focusNext();
+  // Only logging moves focus on by itself; elsewhere a vanished control just loses focus as before.
+  if(fk && !sheetFn && !refocus(document.body, fk) && /^(go-|puck-|val-|act-|rest-skip)/.test(fk)) focusNext();
   lastView=key;
   ping();
 }
