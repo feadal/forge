@@ -1,4 +1,5 @@
--- Install counts for /stats. An install is a random number made by the app; nothing else is kept.
+-- Install counts for /stats. Kept per install: a random number made by the app, the first and last
+-- day it pinged, the days it was opened, and whether a program was built. Nothing else.
 CREATE TABLE IF NOT EXISTS installs (
   id TEXT PRIMARY KEY,
   first_day TEXT NOT NULL,

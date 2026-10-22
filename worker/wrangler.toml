@@ -1,4 +1,4 @@
-# Proxy for the «Спросить» screen. The Gemini key is a secret:
+# FORGE proxy: «Спросить», the daily install ping and the stats page. The Gemini key is a secret:
 #   npx wrangler secret put GEMINI_API_KEY
 name = "forge-ask"
 main = "src/index.js"

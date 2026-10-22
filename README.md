@@ -24,7 +24,7 @@ The current set is drawn. At 72.5 kg you see what to load: 20, 5 and 1.25 per si
 
 During rest the knurling on the drawn bar runs down with the time. The timer counts from a timestamp, so a locked screen does not reset it. The screen stays awake during a workout, and a chime marks the end of rest.
 
-After a workout the app shows your records, and the Progress tab has an estimated one-rep max for every exercise.
+After a workout the app shows your records. The Progress tab shows the estimated one-rep max of the exercises in your program; for pull-ups and dips it includes your body weight.
 
 Nutrition covers calories, protein, fat, carbs and a daily menu. The menu respects 16 restrictions, from allergies and intolerances to vegetarian diets.
 
@@ -47,8 +47,8 @@ The app has no accounts. Your profile, program and workout history stay on your 
 
 Two things leave the phone, both through a small proxy (`worker/`):
 
-- On the Ask screen, your question and the photo if you attach one go to Google Gemini. The only other things sent with it are your goal and the exercise you asked about. The app asks before the first question, and you can turn the assistant off in Settings.
-- Once a day, when online, the app sends a random install number so the owner can count how many people use it. Nothing else goes with it: no weight, workouts, questions or device details. The number is made on the phone and is replaced when you delete all data.
+- On the Ask screen, your question and the photo if you attach one go to Google Gemini. Also sent: your goal, the exercise you asked about, and the last few messages of the current chat, so follow-up questions make sense. The app asks before the first question, and you can turn the assistant off in Settings.
+- Once a day, when online, the app sends a random install number and whether a program has been built, so the owner can count how many people use it. On the day you build a program it sends once more. The proxy keeps the number, the days the app was opened, and that one flag. Nothing else goes with it: no weight, workouts, questions or device details. The number is made on the phone and is replaced when you delete all data.
 
 ## Evidence behind the rules
 
@@ -75,11 +75,11 @@ src/
 worker/                   proxy for the Ask screen (Cloudflare Worker)
 ```
 
-Build with `bash src/build.sh`. There are no dependencies.
+Build with `bash src/build.sh`. It needs only `bash` and `python3`; there is nothing to install.
 
-### Ask proxy
+### Proxy
 
-The Gemini key lives in Cloudflare secrets, never in the repository or the app. To deploy your own proxy:
+The Worker in `worker/` serves the Ask screen, the daily install ping (`/ping`) and the owner's stats page (`/stats`). The Gemini key lives in Cloudflare secrets, never in the repository or the app. To deploy your own proxy:
 
 ```bash
 cd worker
@@ -88,7 +88,7 @@ npx wrangler secret put GEMINI_API_KEY
 npx wrangler deploy
 ```
 
-Then set `ASK_URL` in `src/ui.js` to the Worker address and rebuild. Allowed origins, the model and the rate limits are in `worker/wrangler.toml`. With `ASK_URL` empty the Ask screen and the install count are off.
+Then set `ASK_URL` in `src/ui.js` to the Worker address and rebuild. Allowed origins, the models (tried in order when one is busy) and the rate limits are in `worker/wrangler.toml`. With `ASK_URL` empty the Ask screen and the install count are off.
 
 The install count needs a D1 database and a password for the stats page:
 
