@@ -1404,7 +1404,7 @@ function renderSettings(root){
 
 /* ---------- install count: once a day a random install number goes to the proxy, nothing else ---------- */
 
-var PING_URL=ASK_URL ? ASK_URL.replace(/\/?$/, "/")+"ping" : "", pinging=false;
+var PING_URL=ASK_URL ? ASK_URL.replace(/\/?$/, "/")+"ping" : "", pinging=false, pingAfter=0;
 // The proxy counts days in Moscow time, so the app does too.
 function mskDay(){ return new Date(Date.now()+3*3600e3).toISOString().slice(0,10); }
 function newId(){
@@ -1414,16 +1414,18 @@ function newId(){
 }
 // Pings again the day the program is built, so «собрали программу» counts it.
 function ping(){
-  if(!PING_URL || !storageOk || pinging || navigator.onLine===false) return;
+  // After a failure wait 10 minutes, so a struggling server is not hit on every tap.
+  if(!PING_URL || !storageOk || pinging || navigator.onLine===false || Date.now()<pingAfter) return;
   var mark=mskDay()+(S.program ? "+" : "");
   if(S.seen===mark) return;
   if(!S.uid){ S.uid=newId(); save(); }
   pinging=true;
   fetch(PING_URL, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({id:S.uid, ready:!!S.program}), keepalive:true})
-    .then(function(r){ pinging=false; if(r.ok){ S.seen=mark; save(); } }, function(){ pinging=false; });
+    .then(function(r){ pinging=false; if(r.ok){ S.seen=mark; save(); } else pingAfter=Date.now()+600e3; },
+      function(){ pinging=false; pingAfter=Date.now()+600e3; });
 }
 document.addEventListener("visibilitychange", function(){ if(document.visibilityState==="visible") ping(); });
-window.addEventListener("online", ping);
+window.addEventListener("online", function(){ pingAfter=0; ping(); });
 
 /* ---------- ask: questions and food photos go to the proxy in worker/, nothing else leaves the phone ---------- */
 

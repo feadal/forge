@@ -1,13 +1,18 @@
-const CACHE='forge-v18';
+const CACHE='forge-v19';
 const ASSETS=['./','./index.html','./manifest.webmanifest','./icon.svg','./icon-192.png','./icon-512.png','./apple-touch-icon-180.png','./favicon.svg','./favicon-64.png'];
 const NETWORK_WAIT=3000;
 self.addEventListener('install',function(e){e.waitUntil(caches.open(CACHE).then(function(c){return c.addAll(ASSETS);}).then(function(){return self.skipWaiting();}));});
 self.addEventListener('activate',function(e){e.waitUntil(caches.keys().then(function(keys){return Promise.all(keys.map(function(k){if(k!==CACHE)return caches.delete(k);}));}).then(function(){return self.clients.claim();}));});
 // Pages: give the network a moment so updates arrive, but never let a dead
 // connection in the gym hold the launch. Only good responses replace the cached app.
+// Only the app's own page may replace the cached app, not some other file opened in a tab.
+function isApp(req){
+  var path=new URL(req.url).pathname, base=new URL(self.registration.scope).pathname;
+  return path===base || path===base+'index.html';
+}
 function page(req){
   var network=fetch(req).then(function(resp){
-    if(resp && resp.ok){var copy=resp.clone();caches.open(CACHE).then(function(c){c.put('./index.html',copy);});}
+    if(resp && resp.ok && isApp(req)){var copy=resp.clone();caches.open(CACHE).then(function(c){c.put('./index.html',copy);});}
     return resp;
   });
   var wait=new Promise(function(res){setTimeout(res,NETWORK_WAIT);});
