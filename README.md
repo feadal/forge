@@ -10,7 +10,7 @@ English · [Русский](README.ru.md)
 
 [Open the app](https://feadal.github.io/forge/) (the interface is in Russian)
 
-<img src="screenshots/train.png" width="240" alt="Workout: the current set with the loaded bar"> <img src="screenshots/rest.png" width="240" alt="Rest: time runs down the knurling of the bar"> <img src="screenshots/progress.png" width="240" alt="Progress: estimated one-rep max">
+<img src="screenshots/train.png" width="200" alt="Workout: the current set with the loaded bar"> <img src="screenshots/rest.png" width="200" alt="Rest: time runs down the knurling of the bar"> <img src="screenshots/progress.png" width="200" alt="Progress: estimated one-rep max"> <img src="screenshots/ask-exercise.png" width="200" alt="Ask: how to squat, answered for the open exercise">
 
 </div>
 

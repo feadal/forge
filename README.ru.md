@@ -10,7 +10,7 @@
 
 [Открыть приложение](https://feadal.github.io/forge/)
 
-<img src="screenshots/train.png" width="240" alt="Тренировка: текущий подход и гриф с блинами"> <img src="screenshots/rest.png" width="240" alt="Отдых: время убывает по насечке грифа"> <img src="screenshots/progress.png" width="240" alt="Прогресс: максимум на один повтор">
+<img src="screenshots/train.png" width="200" alt="Тренировка: текущий подход и гриф с блинами"> <img src="screenshots/rest.png" width="200" alt="Отдых: время убывает по насечке грифа"> <img src="screenshots/progress.png" width="200" alt="Прогресс: максимум на один повтор"> <img src="screenshots/ask-exercise.png" width="200" alt="Спросить: как делать присед, ответ про открытое упражнение">
 
 </div>
 
