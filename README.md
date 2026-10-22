@@ -30,6 +30,8 @@ Nutrition covers calories, protein, fat, carbs and a daily menu. The menu respec
 
 If you have an injury, risky exercises stay out of the program. If you report warning symptoms in the questionnaire, the app sends you to a doctor first.
 
+The Ask screen answers questions about technique, the program and food. Send it a photo of a meal and it estimates the portion, calories and macros. The estimate is rough, and the app says so.
+
 ## Install
 
 Open [feadal.github.io/forge](https://feadal.github.io/forge/) and add it to your home screen.
@@ -37,11 +39,13 @@ Open [feadal.github.io/forge](https://feadal.github.io/forge/) and add it to you
 - iPhone: in Safari tap Share, then Add to Home Screen.
 - Android: in Chrome open the menu and tap Install app.
 
-The first launch needs an internet connection. After that the app works offline.
+The first launch needs an internet connection. After that the app works offline, except for the Ask screen.
 
 ## Privacy
 
-The app has no server and no accounts, and it makes no network requests. Your profile, program and workout history stay on your phone, in `localStorage`.
+The app has no accounts. Your profile, program and workout history stay on your phone, in `localStorage`.
+
+The Ask screen is the one exception. Your question, and the photo if you attach one, go through a small proxy (`worker/`) to Google Gemini. The only other things sent with it are your goal and the exercise you asked about. The app asks before the first question, and you can turn the assistant off in Settings.
 
 ## Evidence behind the rules
 
@@ -65,9 +69,23 @@ src/
   style.css               styles
   index.template.html     page template
   build.sh                builds index.html
+worker/                   proxy for the Ask screen (Cloudflare Worker)
 ```
 
 Build with `bash src/build.sh`. There are no dependencies.
+
+### Ask proxy
+
+The Gemini key lives in Cloudflare secrets, never in the repository or the app. To deploy your own proxy:
+
+```bash
+cd worker
+npx wrangler login
+npx wrangler secret put GEMINI_API_KEY
+npx wrangler deploy
+```
+
+Then set `ASK_URL` in `src/ui.js` to the Worker address and rebuild. Allowed origins, the model and the rate limits are in `worker/wrangler.toml`. With `ASK_URL` empty the Ask screen is hidden.
 
 ## Disclaimer
 

@@ -1,4 +1,4 @@
-const CACHE='forge-v17';
+const CACHE='forge-v18';
 const ASSETS=['./','./index.html','./manifest.webmanifest','./icon.svg','./icon-192.png','./icon-512.png','./apple-touch-icon-180.png','./favicon.svg','./favicon-64.png'];
 const NETWORK_WAIT=3000;
 self.addEventListener('install',function(e){e.waitUntil(caches.open(CACHE).then(function(c){return c.addAll(ASSETS);}).then(function(){return self.skipWaiting();}));});

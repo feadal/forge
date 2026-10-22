@@ -495,3 +495,39 @@ button.row:active{background:var(--band)}
 @media (prefers-reduced-motion: reduce){
   *,*::before,*::after{animation:none!important;transition-property:opacity!important;transition-duration:150ms!important}
 }
+
+/* ---------- ask ---------- */
+.head-acts{display:flex;align-items:center;gap:4px}
+.head-acts .icon-btn:not(:last-child){margin-right:0}
+.ask-link{padding:4px var(--m) 0}
+.chip-icon{gap:6px}
+.chip-icon .i-chip{width:18px;height:18px;margin:0}
+#app.view-ask{min-height:100svh;display:flex;flex-direction:column}
+.chat{flex:1;display:flex;flex-direction:column;gap:14px;padding:20px var(--m) 8px}
+.chat .chip{text-align:left}
+.msg{max-width:100%;white-space:pre-line;overflow-wrap:anywhere}
+.msg-u{align-self:flex-end;max-width:82%;display:grid;gap:6px;justify-items:end}
+.msg-u p{background:var(--band);padding:10px 14px;border-radius:var(--r-field)}
+.msg-img{display:block;max-width:220px;max-height:260px;border-radius:var(--r-field);object-fit:cover}
+.msg-m{color:var(--ink)}
+.msg-wait{color:var(--ink-3);font-size:28px;line-height:22px;font-weight:600}
+.msg-err{color:var(--danger);font-size:15px;line-height:20px}
+/* Above the whole dock, so the dock fade does not wash over it. */
+.ask-bar{position:sticky;bottom:calc(var(--dock) + 10px);z-index:21;margin:8px 12px 0;padding:6px;border-radius:var(--r-slab);
+  background:var(--pocket);box-shadow:0 8px 28px rgba(var(--shade),.12),0 1px 3px rgba(var(--shade),.06);display:grid;gap:6px}
+.ask-row{display:flex;align-items:flex-end;gap:4px}
+.ask-row .icon-btn{margin:0}
+.ask-input{flex:1;min-width:0;min-height:44px;max-height:132px;resize:none;border:1px solid transparent;background:none;
+  padding:11px 4px;font:inherit;color:inherit;letter-spacing:inherit;line-height:22px;caret-color:var(--accent)}
+.ask-input:focus{outline:none}
+.ask-input::placeholder{color:var(--ghost)}
+.send{width:44px;height:44px;border-radius:22px;display:grid;place-items:center;flex:none;background:var(--ink);color:var(--ground)}
+.send .ic svg{stroke-width:2.2}
+.send:disabled{background:var(--band);color:var(--ink-3);opacity:1}
+.att{position:relative;justify-self:start;margin:10px 0 0 6px}
+.att img{display:block;width:72px;height:72px;border-radius:var(--r-key);object-fit:cover}
+.att-x{position:absolute;top:4px;right:4px;width:24px;height:24px;border-radius:12px;display:grid;place-items:center;
+  background:var(--ink);color:var(--ground)}
+.att-x .ic{width:14px;height:14px}
+.chip-icon .i-chip svg{stroke-width:2}
+.att-x::before{content:"";position:absolute;inset:-10px}

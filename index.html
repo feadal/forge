@@ -515,6 +515,42 @@ button.row:active{background:var(--band)}
 @media (prefers-reduced-motion: reduce){
   *,*::before,*::after{animation:none!important;transition-property:opacity!important;transition-duration:150ms!important}
 }
+
+/* ---------- ask ---------- */
+.head-acts{display:flex;align-items:center;gap:4px}
+.head-acts .icon-btn:not(:last-child){margin-right:0}
+.ask-link{padding:4px var(--m) 0}
+.chip-icon{gap:6px}
+.chip-icon .i-chip{width:18px;height:18px;margin:0}
+#app.view-ask{min-height:100svh;display:flex;flex-direction:column}
+.chat{flex:1;display:flex;flex-direction:column;gap:14px;padding:20px var(--m) 8px}
+.chat .chip{text-align:left}
+.msg{max-width:100%;white-space:pre-line;overflow-wrap:anywhere}
+.msg-u{align-self:flex-end;max-width:82%;display:grid;gap:6px;justify-items:end}
+.msg-u p{background:var(--band);padding:10px 14px;border-radius:var(--r-field)}
+.msg-img{display:block;max-width:220px;max-height:260px;border-radius:var(--r-field);object-fit:cover}
+.msg-m{color:var(--ink)}
+.msg-wait{color:var(--ink-3);font-size:28px;line-height:22px;font-weight:600}
+.msg-err{color:var(--danger);font-size:15px;line-height:20px}
+/* Above the whole dock, so the dock fade does not wash over it. */
+.ask-bar{position:sticky;bottom:calc(var(--dock) + 10px);z-index:21;margin:8px 12px 0;padding:6px;border-radius:var(--r-slab);
+  background:var(--pocket);box-shadow:0 8px 28px rgba(var(--shade),.12),0 1px 3px rgba(var(--shade),.06);display:grid;gap:6px}
+.ask-row{display:flex;align-items:flex-end;gap:4px}
+.ask-row .icon-btn{margin:0}
+.ask-input{flex:1;min-width:0;min-height:44px;max-height:132px;resize:none;border:1px solid transparent;background:none;
+  padding:11px 4px;font:inherit;color:inherit;letter-spacing:inherit;line-height:22px;caret-color:var(--accent)}
+.ask-input:focus{outline:none}
+.ask-input::placeholder{color:var(--ghost)}
+.send{width:44px;height:44px;border-radius:22px;display:grid;place-items:center;flex:none;background:var(--ink);color:var(--ground)}
+.send .ic svg{stroke-width:2.2}
+.send:disabled{background:var(--band);color:var(--ink-3);opacity:1}
+.att{position:relative;justify-self:start;margin:10px 0 0 6px}
+.att img{display:block;width:72px;height:72px;border-radius:var(--r-key);object-fit:cover}
+.att-x{position:absolute;top:4px;right:4px;width:24px;height:24px;border-radius:12px;display:grid;place-items:center;
+  background:var(--ink);color:var(--ground)}
+.att-x .ic{width:14px;height:14px}
+.chip-icon .i-chip svg{stroke-width:2}
+.att-x::before{content:"";position:absolute;inset:-10px}
 </style>
 </head>
 <body>
@@ -1406,6 +1442,8 @@ return {generateProgram:generateProgram, generateNutrition:generateNutrition, MU
 "use strict";
 var KEY="forge_v2";
 var NB=" ";
+// The «Спросить» proxy (worker/). Empty hides the feature.
+var ASK_URL=window.FORGE_ASK_URL||"https://forge-ask.feadal.workers.dev/";
 
 /* ---------- state ---------- */
 
@@ -1413,7 +1451,7 @@ function fresh(){
   return {v:2, step:"welcome", draft:{}, wq:0, edit:null, rerun:false,
     profile:null, program:null, nutrition:null, nutI:0,
     log:{}, past:[], cycle:1, sessions:[], week:1, day:0, focus:null, session:null, rest:null, summary:null, undo:null,
-    restCfg:{comp:150, iso:90, warm:60}, restEx:{}, tab:"train", theme:"auto"};
+    restCfg:{comp:150, iso:90, warm:60}, restEx:{}, tab:"train", theme:"auto", ask:"on", askOk:false};
 }
 var mem=null, storageOk=true;
 function load(){ try{ var r=localStorage.getItem(KEY); if(r) return JSON.parse(r); }catch(e){ storageOk=false; } return mem; }
@@ -1521,7 +1559,10 @@ var ICON={
   plus:'<path d="M12 6v12M6 12h12"/>',
   stepsOn:'<path d="M3.5 19.5h5v-5h5v-5h5v-5h2" stroke-width="2.6"/>',
   close:'<path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/>',
-  refresh:'<path d="M19 12a7 7 0 1 1-2.2-5.1"/><path d="M17.4 3.2 16.8 6.9l-3.7-.6"/>'
+  refresh:'<path d="M19 12a7 7 0 1 1-2.2-5.1"/><path d="M17.4 3.2 16.8 6.9l-3.7-.6"/>',
+  ask:'<path d="M12 4.5c4.7 0 8 2.9 8 6.6s-3.3 6.6-8 6.6c-.9 0-1.8-.1-2.6-.3L5 19.5l1-3.4C4.7 14.9 4 13.1 4 11.1 4 7.4 7.3 4.5 12 4.5Z"/>',
+  photo:'<path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2.3l1.4-2h5.6l1.4 2h2.3A1.5 1.5 0 0 1 20 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5z"/><circle cx="12" cy="12.5" r="3.5"/>',
+  up:'<path d="M12 19V5.5M6.5 11 12 5.5 17.5 11"/>'
 };
 function icon(name, cls){
   return h("span",{class:"ic"+(cls?" "+cls:""), "aria-hidden":"true",
@@ -2261,7 +2302,7 @@ function pageHead(title, sub, opts){
 
 function renderTrain(root){
   if(cycleDone()){
-    root.appendChild(pageHead("Цикл пройден", "8 недель позади", {action:gearBtn()}));
+    root.appendChild(pageHead("Цикл пройден", "8 недель позади", {action:headAct()}));
     root.appendChild(h("section",{class:"empty"},
       h("p",null,"Собери новую программу. Веса и история останутся."),
       btn("btn btn-primary", "Собрать новую программу", rerunWizard)));
@@ -2272,7 +2313,7 @@ function renderTrain(root){
     h("div",{class:"head-row"},
       h("h1",{class:"head-title"}, h("button",{class:"title-btn", type:"button", onclick:openDayPicker, "aria-label":day.name+". Выбрать тренировку"},
         day.name, icon("down","i-sm"))),
-      gearBtn()),
+      headAct()),
     h("button",{class:"week", type:"button", onclick:function(){ go("program"); }},
       "Неделя"+NB+S.week+" из"+NB+"8 · "+ph.name, icon("next","i-sm"))));
   if(!plan.length){
@@ -2449,7 +2490,7 @@ function mealNow(n){
 }
 function renderFood(root){
   var n=S.nutrition, e=n.energy, m=n.macros;
-  root.appendChild(pageHead("Питание", [e.label].concat(restrictionsShort(S.profile.restrictions)).join(" · "), {action:gearBtn()}));
+  root.appendChild(pageHead("Питание", [e.label].concat(restrictionsShort(S.profile.restrictions)).join(" · "), {action:headAct()}));
   root.appendChild(h("button",{class:"kcal", type:"button", onclick:function(){ go("food-details"); }, "aria-label":"Подробнее о норме"},
     h("span",{class:"kcal-num"}, big(e.target)), h("span",{class:"kcal-unit"}, "ккал", icon("next","i-sm")),
     h("span",{class:"macros"},
@@ -2481,6 +2522,7 @@ function renderFood(root){
   });
   root.appendChild(meals);
   root.appendChild(btn("btn btn-quiet btn-icon", [icon("refresh"), "Другое меню"], function(){ S.nutI++; regenNutrition(true); save(); render(); }));
+  if(askOn()) root.appendChild(btn("btn btn-quiet btn-icon", [icon("photo"), "Оценить блюдо по фото"], function(){ openAsk({}); pickPhoto(); }));
 }
 function renderFoodDetails(root){
   var n=S.nutrition, e=n.energy, p=S.profile;
@@ -2528,7 +2570,7 @@ function bestByExercise(){
 }
 function weeksAgo(ts){ var n=Math.max(1, Math.round((Date.now()-ts)/(7*864e5))); return n+NB+plural(n,"неделю","недели","недель"); }
 function renderProgress(root){
-  root.appendChild(pageHead("Прогресс", null, {action:gearBtn()}));
+  root.appendChild(pageHead("Прогресс", null, {action:headAct()}));
   if(!S.sessions.length){
     root.appendChild(h("section",{class:"empty"}, h("p",null,"Здесь появятся рекорды и история после первой тренировки.")));
     return;
@@ -2611,6 +2653,7 @@ function renderExercise(root, id){
     fact("Запас до отказа", ph.rir+NB+"повт."),
     fact("Мышца", MUSCLE(x.muscle))));
   if(x.cue) root.appendChild(h("p",{class:"cue"}, x.cue));
+  if(askOn()) root.appendChild(h("div",{class:"ask-link"}, btn("link", ["Спросить про упражнение", icon("next","i-sm")], function(){ openAsk({exercise:x.name}); })));
   var restV=restFor(x);
   root.appendChild(h("section",{class:"group"},
     h("div",{class:"stepper"},
@@ -2736,6 +2779,9 @@ function renderSettings(root){
   root.appendChild(h("section",{class:"group"},
     segField("Тема", [["auto","Авто"],["light","Светлая"],["dark","Тёмная"]], S.theme||"auto",
       function(v){ S.theme=v; applyTheme(); save(); render(); })));
+  if(ASK_URL) root.appendChild(h("section",{class:"group"},
+    segField("Помощник", [["on","Вкл"],["off","Выкл"]], S.ask==="off" ? "off" : "on", function(v){ S.ask=v; save(); render(); }),
+    h("p",{class:"fine"}, "Вопросы и фото отправляются в Google Gemini.")));
   var nEx=Object.keys(S.restEx).length;
   root.appendChild(h("section",{class:"group"},
     h("h2",{class:"section-title"},"Отдых"),
@@ -2750,6 +2796,118 @@ function renderSettings(root){
       }});
     })));
   root.appendChild(h("p",{class:"fine about"}, "Данные хранятся только на этом телефоне."));
+}
+
+/* ---------- ask: questions and food photos go to the proxy in worker/, nothing else leaves the phone ---------- */
+
+var chat=[], askDraft="", askImg=null, askBusy=false, askErr=null, askCtx=null;
+var ASK_ERR={offline:"Нет интернета.", net:"Сервер не ответил. Попробуй ещё раз.", timeout:"Сервер не ответил. Попробуй ещё раз.",
+  rate:"Слишком много вопросов подряд. Подожди минуту.", busy:"Помощник занят. Попробуй через минуту.",
+  blocked:"На это ответить не могу.", size:"Фото слишком большое.", fail:"Не получилось. Попробуй ещё раз."};
+function askOn(){ return !!ASK_URL && S.ask!=="off"; }
+function askBtn(){ return btn("icon-btn", icon("ask"), function(){ openAsk(null); }, {"aria-label":"Спросить"}); }
+function headAct(){ return askOn() ? h("div",{class:"head-acts"}, askBtn(), gearBtn()) : gearBtn(); }
+// null keeps the current conversation; a context about another exercise (or none, {}) starts a new one.
+function openAsk(ctx){
+  var was=askCtx && askCtx.exercise, now=ctx && ctx.exercise;
+  if(ctx && was!==now){ chat=[]; askErr=null; }
+  if(ctx || !chat.length) askCtx=ctx;
+  go("ask");
+}
+// Photos are shrunk to 1024 px JPEG on the phone: faster to send, and far under the proxy limit.
+function pickPhoto(){
+  var inp=h("input",{type:"file", accept:"image/*", class:"sr-only", tabindex:"-1", "aria-hidden":"true"});
+  inp.oncancel=function(){ inp.remove(); };
+  inp.onchange=function(){
+    var f=inp.files && inp.files[0]; inp.remove();
+    if(!f) return;
+    var url=URL.createObjectURL(f), img=new Image();
+    img.onload=function(){
+      var k=Math.min(1, 1024/Math.max(img.naturalWidth, img.naturalHeight)), c=document.createElement("canvas");
+      c.width=Math.max(1, Math.round(img.naturalWidth*k)); c.height=Math.max(1, Math.round(img.naturalHeight*k));
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      var d=c.toDataURL("image/jpeg", .82);
+      askImg={mime:"image/jpeg", data:d.slice(d.indexOf(",")+1), url:d}; askErr=null;
+      render();
+    };
+    img.onerror=function(){ URL.revokeObjectURL(url); askErr="Не получилось открыть фото."; render(); };
+    img.src=url;
+  };
+  document.body.appendChild(inp);
+  inp.click();
+}
+function askSend(text){
+  var q=(text!=null ? text : askDraft).trim(), img=askImg;
+  if(askBusy || (!q && !img)) return;
+  if(!S.askOk){
+    confirmSheet({title:"Отправить вопрос?", text:"Вопрос и фото уйдут в Google Gemini, чтобы получить ответ. Программа и история остаются на телефоне.",
+      ok:"Отправить", onOk:function(){ S.askOk=true; save(); askSend(text); }});
+    return;
+  }
+  var hist=chat.slice(-6).map(function(m){ return {r:m.r, t:m.r==="u" && m.img ? (m.t||"Фото блюда")+" [фото]" : m.t}; });
+  var ctx={goal:S.profile ? GOAL_RU[S.profile.goal] : null, exercise:askCtx && askCtx.exercise || null};
+  chat.push({r:"u", t:q, img:img ? img.url : null});
+  if(text==null) askDraft="";
+  askImg=null; askBusy=true; askErr=null;
+  if(document.activeElement) document.activeElement.blur();
+  render(); askScroll();
+  askFetch({q:q, img:img ? {mime:img.mime, data:img.data} : null, hist:hist, ctx:ctx}, function(err, a){
+    askBusy=false;
+    if(err){
+      // Put the question back so nothing typed or picked is lost.
+      chat.pop(); askErr=ASK_ERR[err]||ASK_ERR.fail;
+      if(!askDraft) askDraft=q;
+      if(!askImg) askImg=img;
+    } else chat.push({r:"m", t:a});
+    if(route()==="ask"){ render(); askScroll(); }
+  });
+}
+function askFetch(payload, done){
+  var ctl=window.AbortController ? new AbortController() : null;
+  var timer=setTimeout(function(){ if(ctl) ctl.abort(); }, 35000);
+  fetch(ASK_URL, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(payload), signal:ctl ? ctl.signal : undefined})
+    .then(function(r){ return r.json().catch(function(){ return {}; }).then(function(j){ return {status:r.status, j:j||{}}; }); })
+    .then(function(x){ clearTimeout(timer); if(x.status===200 && x.j.a) done(null, x.j.a); else done(x.j.err||"fail"); },
+      function(){ clearTimeout(timer); done(navigator.onLine===false ? "offline" : "net"); });
+}
+function askScroll(){ window.scrollTo(0, document.documentElement.scrollHeight); }
+function renderAsk(root){
+  var ex=askCtx && askCtx.exercise;
+  root.appendChild(pageHead("Спросить", ex ? "Про «"+ex+"»" : null, {back:true}));
+  var log=h("div",{class:"chat", "aria-live":"polite"});
+  // Ideas hide once a photo is attached: a tapped idea would carry the photo with it.
+  if(!chat.length && !askBusy && !askImg){
+    var ideas=ex ? ["Как делать правильно?", "Чем заменить?"] : ["Сколько отдыхать между подходами?", "Что съесть перед тренировкой?"];
+    log.appendChild(h("div",{class:"chips"},
+      ideas.map(function(t){ return btn("chip", t, function(){ askSend(t); }); }),
+      ex ? null : btn("chip chip-icon", [icon("photo","i-chip"), "Фото блюда"], pickPhoto)));
+  }
+  chat.forEach(function(m){
+    if(m.r==="u") log.appendChild(h("div",{class:"msg msg-u"},
+      m.img ? h("img",{class:"msg-img", src:m.img, alt:"Фото к вопросу"}) : null,
+      m.t ? h("p",null, m.t) : null));
+    else log.appendChild(h("p",{class:"msg msg-m"}, m.t));
+  });
+  if(askBusy) log.appendChild(h("p",{class:"msg msg-m msg-wait"}, h("span",{"aria-hidden":"true"}, "…"), h("span",{class:"sr-only"}, "Ждём ответ")));
+  if(askErr) log.appendChild(h("p",{class:"msg-err", role:"alert"}, askErr));
+  root.appendChild(log);
+
+  var send=btn("send", icon("up"), function(){ askSend(); }, {"aria-label":"Отправить", disabled:askBusy || (!askDraft.trim() && !askImg) ? "" : null});
+  var ta=h("textarea",{class:"ask-input", rows:"1", maxlength:"600", placeholder:askImg ? "Вопрос к фото" : "Вопрос", enterkeyhint:"send",
+    "aria-label":"Вопрос", "data-fk":"ask-q"});
+  ta.value=askDraft;
+  function grow(){ ta.style.height="auto"; ta.style.height=Math.min(ta.scrollHeight, 132)+"px"; }
+  ta.oninput=function(){ askDraft=ta.value; send.disabled=askBusy || (!askDraft.trim() && !askImg); grow(); };
+  ta.onkeydown=function(e){ if(e.key==="Enter" && !e.shiftKey && !e.isComposing){ e.preventDefault(); askSend(); } };
+  root.appendChild(h("div",{class:"ask-bar"},
+    askImg ? h("div",{class:"att"},
+      h("img",{src:askImg.url, alt:"Выбранное фото"}),
+      btn("att-x", icon("close","i-sm"), function(){ askImg=null; render(); }, {"aria-label":"Убрать фото"})) : null,
+    h("div",{class:"ask-row"},
+      btn("icon-btn", icon("photo"), pickPhoto, {"aria-label":askImg ? "Заменить фото" : "Добавить фото"}),
+      ta, send)));
+  requestAnimationFrame(grow);
 }
 
 /* ---------- questionnaire ---------- */
@@ -3040,6 +3198,7 @@ function render(){
     if(r==="program") renderProgram(root);
     else if(r==="settings") renderSettings(root);
     else if(r==="food-details") renderFoodDetails(root);
+    else if(r==="ask" && askOn()) renderAsk(root);
     else if(r.indexOf("ex/")===0) renderExercise(root, r.slice(3));
     else if(S.tab==="food") renderFood(root);
     else if(S.tab==="progress") renderProgress(root);

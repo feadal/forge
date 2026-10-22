@@ -1,0 +1,27 @@
+# Proxy for the «Спросить» screen. The Gemini key is a secret:
+#   npx wrangler secret put GEMINI_API_KEY
+name = "forge-ask"
+main = "src/index.js"
+compatibility_date = "2025-09-01"
+
+[vars]
+# Tried in order: when one is overloaded or slow, the next answers.
+# 3.8 Flash is last: on 22 Oct 2026 it timed out on the free tier while 3.6 answered in 4 s.
+MODELS = "gemini-3.6-flash,gemini-3.5-flash-lite,gemini-3.8-flash"
+ALLOWED_ORIGINS = "https://feadal.github.io"
+
+# Per address: 5 questions a minute.
+[[ratelimits]]
+name = "PER_USER"
+namespace_id = "1001"
+  [ratelimits.simple]
+  limit = 5
+  period = 60
+
+# Everyone together: stays under the free Gemini quota of about 10 requests a minute.
+[[ratelimits]]
+name = "ALL"
+namespace_id = "1002"
+  [ratelimits.simple]
+  limit = 9
+  period = 60
