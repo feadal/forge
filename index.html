@@ -2382,7 +2382,7 @@ function platform(){
       "aria-label":"Отдых"+(nx ? ". Дальше: "+nx.title+(nx.r!=null ? ", "+setXR(nx.w,nx.r) : "") : "")},
     h("div",{class:"pl-top"},
       h("span",{class:"pl-time", id:"dock-rest"}, mmss(left)),
-      btn("plus", "+30"+NB+"с", function(){ S.rest.end+=30000; S.rest.total+=30; save(); tick(); }, {"aria-label":"Добавить 30 секунд"})),
+      btn("plus", "+30"+NB+"с", function(){ S.rest.end+=30000; S.rest.total+=30; save(); tick(); }, {"aria-label":"Добавить 30 секунд", "data-fk":"rest-plus"})),
     h("div",{class:"pl-bar", html:barSVG(load, {w:322, h:66, rest:left/S.rest.total, label:"Остаток отдыха"})}),
     h("div",{class:"pl-bottom"},
       h("span",{class:"nx"}, nx ? [nx.title, nx.r!=null ? [" · ", h("b",null, setXR(nx.w, nx.r, nx.x))] : null] : "Последний подход позади"),
@@ -2990,7 +2990,9 @@ function askSend(text){
   chat.push({r:"u", t:q, img:img ? img.url : null});
   if(text==null) askDraft="";
   askImg=null; askBusy=true; askErr=null;
+  // Leave the keyboard down while the answer comes, also right after the consent sheet.
   if(document.activeElement) document.activeElement.blur();
+  pendingFocus=null;
   render(); askScroll();
   var gen=askGen;
   askFetch({q:q, img:img ? {mime:img.mime, data:img.data} : null, hist:hist, ctx:ctx}, function(err, a){
@@ -3363,8 +3365,9 @@ function render(){
   if(reveal) revealActive(reveal);
   reveal=null;
   renderTopbar();
-  // Only logging moves focus on by itself; elsewhere a vanished control just loses focus as before.
-  if(fk && !sheetFn && !refocus(document.body, fk) && /^(go-|puck-|val-|act-|rest-skip)/.test(fk)) focusNext();
+  // Only logging on the same screen moves focus on by itself; elsewhere a vanished control
+  // just loses focus as before.
+  if(fk && !sheetFn && !refocus(document.body, fk) && same && /^(go-|puck-|val-|act-|rest-)/.test(fk)) focusNext();
   lastView=key;
   ping();
 }
