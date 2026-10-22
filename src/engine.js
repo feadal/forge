@@ -89,17 +89,21 @@ const LIMITS = {
   knee: {
     ru:"Колени",
     ban:["bulgarian_split","hack_squat"],
+    edit:{back_squat:{name:"Присед со штангой на ящик", cue:"Ящик на 10–15° выше угла, где начинается боль"},
+          leg_extension:{cue:"Лёгкий вес, неполная амплитуда"}},
     note:"Ограничь глубину приседа на 10–15° выше угла, где начинается боль (ставь ящик). Разгибания ног — лёгкие и в частичной амплитуде. Глубину возвращай по неделям."
   },
   shoulder: {
     ru:"Плечи",
     ban:["ohp","dip"],
+    must:"facepull",
     note:"Никаких жимов и тяг из-за головы. Гантели вместо штанги — сустав сам выбирает траекторию. Face pull 2×/нед обязательно. Если жим болит — сузь амплитуду."
   },
   elbow: {
     ru:"Локти",
     ban:["skullcrusher","bb_curl","pullup","barbell_row"],
-    note:"Вес −40–50%, повторы 12–20, негатив 3–4 сек. Лямки на всех тягах. Прямой гриф заменён на гантели/канат. Восстановление занимает 6–12 недель — это нормально."
+    reps:{biceps:"12–20", triceps:"12–20"},
+    note:"Бицепс и трицепс: вес −40–50%, повторы 12–20, негатив 3–4 сек. Лямки на всех тягах. Прямой гриф заменён на гантели/канат. Восстановление занимает 6–12 недель — это нормально."
   },
   wrist: {
     ru:"Запястья",
@@ -108,7 +112,7 @@ const LIMITS = {
   },
   hernia: {
     ru:"Грыжа в прошлом",
-    ban:["rdl","back_squat","hanging_leg_raise","ohp"],
+    ban:["rdl","back_squat","hanging_leg_raise","cable_crunch","ohp"],
     note:"Без максимальных усилий и натуживания: выдох на усилии, воздух не задерживать. Пресс — только антидвижение (планка), без скручиваний и подъёмов ног в висе."
   },
   hip: {
@@ -228,6 +232,9 @@ function splitOptionsFor(days, legs){
   return out;
 }
 
+// Muscles of each day type, shared by the templates and the auto split.
+const PARTS = { upper: UPPER.concat("core"), lower: GROUP.legs, full: ALL, push: GROUP.push, pull: GROUP.pull.concat("core"), legs: GROUP.legs };
+
 function buildFromTemplate(pref, days, legs){
   const t = SPLIT_TPL[pref];
   if(!t) return null;
@@ -240,7 +247,6 @@ function buildFromTemplate(pref, days, legs){
     return {name: t.ru + " · " + days + " дн/нед",
             days: rows.map(r=>({name:r[0], muscles:r[1].slice()}))};
   }
-  const tpl = { upper: UPPER.concat("core"), lower: GROUP.legs, full: ALL, push: GROUP.push, pull: GROUP.pull.concat("core"), legs: GROUP.legs };
   const seq = [];
   const seen = {};
   for(let i=0;i<days;i++){
@@ -249,7 +255,7 @@ function buildFromTemplate(pref, days, legs){
     seen[key] = (seen[key]||0) + 1;
     const many = days > t.parts.length;
     const label = part[1] + (many ? " " + "АБВГДЕ".charAt(seen[key]-1) : "");
-    seq.push({name: label, muscles: (tpl[key]||ALL).slice()});
+    seq.push({name: label, muscles: (PARTS[key]||ALL).slice()});
   }
   const label = (days % t.parts.length === 0)
     ? t.ru + " ×" + (days / t.parts.length)
@@ -258,7 +264,6 @@ function buildFromTemplate(pref, days, legs){
 }
 
 function chooseSplit(days, legs, pref){
-  const tpl = { upper: UPPER, lower: GROUP.legs, full: ALL, push: GROUP.push, pull: GROUP.pull.concat("core"), legs: GROUP.legs };
   if(pref && pref!=="auto" && splitOptionsFor(days, legs).indexOf(pref)>=0){
     const built = buildFromTemplate(pref, days, legs);
     if(built) return built;
@@ -273,7 +278,7 @@ function chooseSplit(days, legs, pref){
     else seq=[u("А"),u("Б"),u("А2"),u("Б2"),u("А3"),u("Б3")];
     return {name:"Только верх ×"+days, days:seq};
   }
-  const mk=(key,label)=>({name:label, muscles:tpl[key].slice()});
+  const mk=(key,label)=>({name:label, muscles:PARTS[key].slice()});
   if(days<=2){ seq=[mk("full","Всё тело А"),mk("full","Всё тело Б")]; return splitName("Фулбади ×2",seq); }
   if(days===3){ seq=[mk("full","Всё тело А"),mk("full","Всё тело Б"),mk("full","Всё тело В")]; return splitName("Фулбади ×3",seq); }
   if(days===4){ seq=[mk("upper","Верх А"),mk("lower","Низ А"),mk("upper","Верх Б"),mk("lower","Низ Б")]; return splitName("Верх/Низ ×2",seq); }
@@ -331,37 +336,32 @@ function repScheme(goal, ex, isMain){
   return {reps:"10–15", rir:"0–1"};
 }
 
-function pickExercises(muscle, nsets, eqSet, usedPat, goal, rot, banned){
-  // Banned moves never come back: with no safe option the muscle is skipped for the day.
-  let pool = EX.filter(e=> e.m===muscle && e.eq.some(x=>eqSet.has(x)) && !(banned && banned.has(e.id)));
+// How many exercises a muscle's sets for one session are split into.
+function exCount(nsets){ return nsets<=5?1 : nsets<=9?2 : 3; }
+
+// pool holds only safe moves for this muscle (banned ones never come back).
+// One exercise per movement pattern; the sets are split over the exercises actually chosen.
+function pickExercises(pool, nsets, nEx, usedPat, goal, rot, first){
   const score = (e)=> (e.t==="comp"?2:0) + (e.stretch?1:0);
-  pool.sort((a,b)=> score(b)-score(a));
+  pool = pool.slice().sort((a,b)=> score(b)-score(a));
   if(rot && pool.length>1){
     const k = rot % pool.length;
     pool = pool.slice(k).concat(pool.slice(0,k));
   }
-  const out=[];
-  let need = nsets;
-  const nEx = need<=5?1 : need<=9?2 : 3;
-  const perEx = [];
-  if(nEx===1) perEx.push(need);
-  else if(nEx===2){ perEx.push(Math.ceil(need/2)); perEx.push(need-perEx[0]); }
-  else { const a=Math.ceil(need/3); perEx.push(a,a,need-2*a); }
-  let i=0;
+  if(first) pool.sort((a,b)=> (b.id===first)-(a.id===first));
+  const chosen=[];
   for(const e of pool){
-    if(out.length>=nEx) break;
+    if(chosen.length>=nEx) break;
     if(usedPat.has(e.pat)) continue;
     usedPat.add(e.pat);
-    const isMain = out.length===0 && e.t==="comp";
-    const rs = repScheme(goal, e, isMain);
-    out.push({id:e.id, name:e.n, muscle, sets:perEx[i]||need, reps:rs.reps, rir:rs.rir, cue:e.cue, stretch:!!e.stretch, type:e.t, eq:e.eq.slice()});
-    i++;
+    chosen.push(e);
   }
-  if(out.length===0 && pool.length){
-    const e=pool[0]; const rs=repScheme(goal,e,e.t==="comp");
-    out.push({id:e.id,name:e.n,muscle,sets:need,reps:rs.reps,rir:rs.rir,cue:e.cue,stretch:!!e.stretch,type:e.t,eq:e.eq.slice()});
-  }
-  return out;
+  if(!chosen.length && pool.length) chosen.push(pool[0]);
+  return chosen.map((e,i)=>{
+    const rs = repScheme(goal, e, i===0 && e.t==="comp");
+    const sets = clamp(Math.floor(nsets/chosen.length) + (i < nsets%chosen.length ? 1 : 0), 2, 5);
+    return {id:e.id, name:e.n, muscle:e.m, sets, reps:rs.reps, rir:rs.rir, cue:e.cue, stretch:!!e.stretch, type:e.t, eq:e.eq.slice()};
+  });
 }
 
 function generateProgram(input){
@@ -369,69 +369,119 @@ function generateProgram(input){
   input.days = clamp(input.days,2,6);
   const split = chooseSplit(input.days, input.legs, input.split);
   const vol = weeklyVolume(input);
-
-  const dayCount = {};
-  MUSCLES.forEach(m=> dayCount[m]=0);
-  split.days.forEach(d=> d.muscles.forEach(m=>{ if(vol[m]>0) dayCount[m]++; }));
-
   const cap = sessionCap(input.minutes);
+  const maxEx = maxExercises(input.minutes, input.level);
   const priority = ["quads","chest","lats","upback","hams","glutes","sdelt","triceps","biceps","rdelt","calves","traps","core"];
   const eqSet = new Set(input.equipment && input.equipment.length ? input.equipment : ["bb","db","cable","machine","bw"]);
+  const lims = (input.limits||[]).map(k=>LIMITS[k]).filter(Boolean);
   const banned = new Set();
-  (input.limits||[]).forEach(k=>{ const L=LIMITS[k]; if(L) L.ban.forEach(id=>banned.add(id)); });
-  const skipped = new Set();
+  lims.forEach(L=> L.ban.forEach(id=>banned.add(id)));
 
+  // Safe moves per muscle. A muscle takes one exercise per movement pattern, three at most.
+  const pool = {}, pats = {};
+  MUSCLES.forEach(m=>{
+    pool[m] = EX.filter(e=> e.m===m && e.eq.some(x=>eqSet.has(x)) && !banned.has(e.id));
+    pats[m] = Math.min(3, new Set(pool[m].map(e=>e.pat)).size);
+  });
+  const live = (m)=> vol[m]>0 && pats[m]>0;
+  const listed = split.days.map(d=> priority.filter(m=> d.muscles.indexOf(m)>=0 && live(m)));
+
+  // A limit can require a move twice a week (face pull for shoulders): add its muscle to more days,
+  // upper-body days with the fewest muscles first.
+  const must = {};
+  lims.forEach(L=>{
+    const e = L.must && EX.filter(x=> x.id===L.must)[0];
+    if(!e || !live(e.m) || pool[e.m].indexOf(e)<0) return;
+    must[e.m] = e.id;
+    const legDay = (i)=> listed[i].some(m=> UPPER.indexOf(m)>=0) ? 0 : 1;
+    let n = listed.filter(ms=> ms.indexOf(e.m)>=0).length;
+    listed.map((ms,i)=>i).filter(i=> listed[i].indexOf(e.m)<0)
+      .sort((a,b)=> legDay(a)-legDay(b) || listed[a].length-listed[b].length)
+      .forEach(i=>{ if(n<2){ listed[i] = priority.filter(m=> m===e.m || listed[i].indexOf(m)>=0); n++; } });
+  });
+
+  // 1. Muscles per session. Past the exercise cap the top three (and required ones) stay;
+  // the other slots go to the muscles trained on the fewest days so far.
+  const got = {};
+  const plan = listed.map(ms=>{
+    if(ms.length > maxEx){
+      const head = ms.filter(m=> must[m]);
+      ms.forEach(m=>{ if(head.length < Math.min(3, maxEx) && head.indexOf(m)<0) head.push(m); });
+      const tail = ms.filter(m=> head.indexOf(m)<0).sort((a,b)=> (got[a]||0)-(got[b]||0));
+      const picked = head.concat(tail).slice(0, maxEx);
+      ms = ms.filter(m=> picked.indexOf(m)>=0);
+    }
+    ms.forEach(m=> got[m] = (got[m]||0)+1);
+    return ms;
+  });
+
+  // 2. Sets: the weekly target spread over those sessions, then fitted into each session:
+  // spare exercise slots go to muscles with many sets, 5 sets per exercise, then the set cap.
+  const sum = (w)=> Object.keys(w).reduce((a,m)=> a+w[m], 0);
+  const sess = plan.map(ms=>{
+    const w = {}, slot = {};
+    ms.forEach(m=>{ w[m] = Math.max(2, round(vol[m]/got[m])); slot[m] = 1; });
+    let free = maxEx - ms.length, more = true;
+    while(free>0 && more){
+      more = false;
+      ms.forEach(m=>{ if(free>0 && slot[m] < Math.min(pats[m], exCount(w[m]))){ slot[m]++; free--; more = true; } });
+    }
+    ms.forEach(m=>{ w[m] = Math.min(w[m], 5*slot[m]); });
+    if(sum(w) > cap){
+      const scale = cap/sum(w);
+      ms.forEach(m=>{ w[m] = Math.max(2, round(w[m]*scale)); });
+      // Trim the biggest; on a tie the lower-priority muscle gives up the set.
+      let guard = 0;
+      while(sum(w) > cap && guard++ < 100){
+        let big = null;
+        ms.forEach(m=>{ if(w[m] > 2 && (!big || w[m] >= w[big])) big = m; });
+        if(!big) break;
+        w[big] -= 1;
+      }
+    }
+    return {w, slot};
+  });
+
+  // 3. Sets the caps cut go to other sessions of the same muscle that still have room,
+  // the muscle furthest below its target first.
+  const total = (m)=> sess.reduce((a,s)=> a+(s.w[m]||0), 0);
+  const fits = (s,m)=> s.w[m]!=null && sum(s.w) < cap &&
+    (s.w[m] < 5*s.slot[m] || (s.slot[m] < pats[m] && sum(s.slot) < maxEx));
+  for(let guard=0; guard<500; guard++){
+    let best = null;
+    MUSCLES.forEach(m=>{
+      const r = (vol[m]-total(m))/vol[m];
+      if(!(r>0) || (best && r <= best.r)) return;
+      const ss = sess.filter(s=> fits(s,m)).sort((a,b)=> a.w[m]-b.w[m] || sum(a.w)-sum(b.w));
+      if(ss.length) best = {m, r, s:ss[0]};
+    });
+    if(!best) break;
+    const s = best.s, m = best.m;
+    if(s.w[m] >= 5*s.slot[m]) s.slot[m]++;
+    s.w[m]++;
+  }
+
+  // 4. Exercises.
   const days = split.days.map((d, di)=>{
     const usedPat = new Set();
     const items = [];
-    let dayMuscles = priority.filter(m=> d.muscles.indexOf(m)>=0 && vol[m]>0 && dayCount[m]>0);
-
-    const maxEx = maxExercises(input.minutes, input.level);
-    if(dayMuscles.length > maxEx){
-      const keep = Math.min(3, maxEx);
-      const head = dayMuscles.slice(0, keep);
-      const tail = dayMuscles.slice(keep);
-      const step = Math.max(1, maxEx - keep);
-      const k = (di * step) % tail.length;
-      const rotated = tail.slice(k).concat(tail.slice(0,k));
-      const picked = head.concat(rotated).slice(0, maxEx);
-      dayMuscles = priority.filter(m=> picked.indexOf(m)>=0);
-    }
-
-    const want = {};
-    dayMuscles.forEach(m=>{ want[m] = Math.max(2, Math.round(vol[m]/dayCount[m])); });
-    let sum = dayMuscles.reduce((a,m)=>a+want[m],0);
-
-    if(sum > cap){
-      const scale = cap/sum;
-      dayMuscles.forEach(m=>{ want[m] = Math.max(2, Math.round(want[m]*scale)); });
-      sum = dayMuscles.reduce((a,m)=>a+want[m],0);
-      let guard = 0;
-      while(sum > cap && guard++ < 100){
-        let big = null;
-        dayMuscles.forEach(m=>{ if(want[m] > 2 && (!big || want[m] > want[big])) big = m; });
-        if(!big) break;
-        want[big] -= 1; sum -= 1;
-      }
-    }
-
-    for(const m of dayMuscles){
-      if(want[m] < 2) continue;
-      if(items.length >= maxEx) break;
-      const chosen = pickExercises(m, want[m], eqSet, usedPat, input.goal, di, banned);
-      if(!chosen.length) skipped.add(m);
-      for(const c of chosen){
-        if(items.length >= maxEx) break;
-        c.sets = clamp(c.sets, 2, 5);
-        items.push(c);
-      }
-    }
+    plan[di].forEach(m=>{
+      const w = sess[di].w[m];
+      pickExercises(pool[m], w, Math.min(sess[di].slot[m], exCount(w)), usedPat, input.goal, di, must[m]).forEach(x=> items.push(x));
+    });
+    lims.forEach(L=> items.forEach(x=>{
+      if(L.edit && L.edit[x.id]) Object.assign(x, L.edit[x.id]);
+      if(L.reps && L.reps[x.muscle]) x.reps = L.reps[x.muscle];
+    }));
     return {key:d.name, name:d.name, exercises:items};
   });
 
   const achieved = {};
   MUSCLES.forEach(m=> achieved[m]=0);
   days.forEach(d=> d.exercises.forEach(x=> achieved[x.muscle]+=x.sets));
+  const skipped = MUSCLES.filter(m=> vol[m]>0 && !pats[m]);
+  // Under 70% of the target: the sessions had no room for more.
+  const shortfall = MUSCLES.filter(m=> vol[m]>0 && pats[m] && achieved[m] < 0.7*vol[m]);
 
   return {
     meta:{split:split.name, days:input.days, goal:input.goal, level:input.level, minutes:input.minutes, legs:input.legs},
@@ -443,15 +493,18 @@ function generateProgram(input){
       : input.goal==="cut"
       ? "Держи прежние веса на базе. Если вес на штанге падает две тренировки подряд, уменьши дефицит в еде, а не подходы."
       : "Добавляй по повтору в рамках диапазона. Выбил верх во всех подходах — прибавь вес: 2,5 кг на базе, 1–2 кг на изоляции.",
-    skipped: MUSCLES.filter(m=> skipped.has(m) && !achieved[m]),
-    notes: buildNotes(input, split, achieved, vol),
+    skipped,
+    shortfall,
+    notes: buildNotes(input, shortfall, achieved, vol),
     limitNotes: (input.limits||[]).map(k=> LIMITS[k] ? {title:LIMITS[k].ru, note:LIMITS[k].note} : null).filter(Boolean)
   };
 }
 
-function buildNotes(input, split, achieved, target){
+function buildNotes(input, shortfall, achieved, target){
   const notes=[];
   if(!input.legs) notes.push("Ноги исключены: программа только на верх.");
+  if(shortfall.length) notes.push("Меньше нормы подходов в неделю: "+
+    shortfall.map(m=> MUSCLE_RU[m].toLowerCase()+" "+achieved[m]+" из "+target[m]).join(", ")+".");
   // The same words the questionnaire used for these choices.
   const EMPH_RU={chest:"грудь", lats:"спина", sdelt:"плечи", biceps:"бицепс", triceps:"трицепс", quads:"ноги", glutes:"ягодицы", core:"пресс"};
   const emph=(input.emphasis||[]).map(m=>EMPH_RU[m]||MUSCLE_RU[m]).filter(Boolean);
