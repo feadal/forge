@@ -214,13 +214,11 @@ function eqFor(x){
   return list[0] || "";
 }
 function loadKind(x){ var e=eqFor(x); return e==="bb" ? "bar" : e==="db" ? "db" : (e==="cable" || e==="machine") ? "stack" : e==="bw" ? "bw" : ""; }
-// What the weight field means when it is not obvious. The keypad gets the longer version.
-function weightNote(x, long){
-  var k=loadKind(x);
-  if(k==="db") return "Вес одной гантели";
-  if(k==="bw") return long ? "Только дополнительный вес, без него оставь пустым" : "Дополнительный вес";
-  return null;
-}
+// What the weight field means when it is not obvious: a short caption under the field,
+// the full name for screen readers, and the keypad's longer line.
+var WEIGHT_NOTE={db:{short:"Одна гантель", name:"Вес одной гантели", long:"Вес одной гантели"},
+  bw:{short:"Доп. вес", name:"Дополнительный вес", long:"Только дополнительный вес, без него оставь пустым"}};
+function weightNote(x, form){ var n=WEIGHT_NOTE[loadKind(x)]; return n ? n[form||"name"] : null; }
 // Pull-ups and dips lift the body too, so their estimated max counts body weight plus the extra load.
 function bodyLift(x){ return !!x && loadKind(x)==="bw" && x.type==="comp"; }
 function setMax(x, r){ return e1rm((r.w||0)+(bodyLift(x) && S.profile ? S.profile.weight||0 : 0), r.r); }
@@ -798,7 +796,7 @@ function padView(){
         onclick:function(){ pad.t=t; pad.typeOpen=false; pad.dirty=true; buzz(6); renderSheet(); }}, typeLabel(t));
     })) : null,
     h("div",{class:"sh-value"}, slot(pad,"w","кг"), h("span",{class:"times","aria-hidden":"true"},"×"), slot(pad,"r",null)),
-    weightNote(p.x, true) ? h("p",{class:"sh-hint","aria-hidden":"true"}, weightNote(p.x, true)) : null,
+    weightNote(p.x) ? h("p",{class:"sh-hint","aria-hidden":"true"}, weightNote(p.x,"long")) : null,
     pad.err ? h("p",{class:"field-error sheet-err", role:"alert"}, pad.err) : null,
     loadArt(p.x, w, {h:60}) ? h("div",{class:"sh-bar", html:loadArt(p.x, w, {h:60})}) : null,
     keysGrid(pad, pad.field==="w" ? "Повторы" : pad.done ? "Сохранить" : "Записать", padNext));
@@ -1029,7 +1027,7 @@ function activeSet(p, si){
       pocket(r, "r", gr, null),
       h("button",{class:"go", type:"button", "data-fk":"go-"+p.x.id, onclick:function(){ toggleSet(p, si); },
         "aria-label":"Записать "+(si==="w"?"разминку":"подход "+(si+1))+(r!=null ? ": "+setXR(w,r,p.x) : "")}, icon("tick","i-go"))),
-    weightNote(p.x) ? h("p",{class:"act-hint","aria-hidden":"true"}, weightNote(p.x)) : null);
+    weightNote(p.x) ? h("p",{class:"act-hint","aria-hidden":"true"}, weightNote(p.x,"short")) : null);
 }
 
 function openDayPicker(){
@@ -1189,7 +1187,7 @@ function bestByExercise(){
     delete o.sets; return o;
   });
 }
-function weeksAgo(ts){ var n=Math.max(1, Math.round((Date.now()-ts)/(7*864e5))); return n+NB+plural(n,"неделю","недели","недель"); }
+function weeksAgo(ts){ var n=Math.max(1, Math.round((Date.now()-ts)/(7*864e5))); return n===1 ? "неделю" : n+NB+plural(n,"неделю","недели","недель"); }
 function renderProgress(root){
   root.appendChild(pageHead("Прогресс", null, {action:headAct()}));
   if(!S.sessions.length){
@@ -1203,7 +1201,7 @@ function renderProgress(root){
     root.appendChild(h("button",{class:"hero", type:"button", onclick:function(){ go("ex/"+top.id); }},
       h("span",{class:"hero-name"}, ex.name),
       h("span",{class:"hero-num"}, String(Math.round(top.best)), h("span",{class:"hero-unit"}, NB+"кг")),
-      h("span",{class:"hero-sub"}, "Расчётный максимум"+(bodyLift(ex) ? " с весом тела" : "")+(gain>0 ? " · +"+gain+NB+"кг за "+weeksAgo(top.firstAt||top.at) : "")),
+      h("span",{class:"hero-sub"}, (bodyLift(ex) ? "Максимум с весом тела" : "Расчётный максимум")+(gain>0 ? " · +"+gain+NB+"кг за"+NB+weeksAgo(top.firstAt||top.at) : "")),
       loadArt(ex, top.w, {cls:"is-ink"}) ? h("span",{class:"hero-art", html:loadArt(ex, top.w, {cls:"is-ink"})}) : null,
       top.r ? h("span",{class:"hero-cap"}, "Лучший подход: "+setXR(top.w, top.r)) : null));
   }
@@ -1225,7 +1223,8 @@ function renderProgress(root){
     h("div",{class:"rows"}, S.sessions.slice().reverse().slice(0,30).map(function(s){
       return h("div",{class:"row"},
         h("span",{class:"row-label"}, s.name, h("small",null, dayLabel(s.at))),
-        h("span",{class:"row-value"}, big(s.tonnage)+NB+"кг", h("small",null, s.min+NB+"мин")));
+        // Body-weight-only workouts move no counted load, so show their sets instead of «0 кг».
+        h("span",{class:"row-value"}, s.tonnage ? big(s.tonnage)+NB+"кг" : s.sets+NB+plural(s.sets,"подход","подхода","подходов"), h("small",null, s.min+NB+"мин")));
     }))));
 }
 
