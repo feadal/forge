@@ -187,6 +187,15 @@ noscript{display:block;padding:24px var(--m)}
 .go{margin-left:auto;width:64px;height:64px;border-radius:32px;flex:none;background:var(--accent);color:var(--on-accent);display:grid;place-items:center;
   transition:transform .12s ease-out}
 .go:active{transform:scale(.94)}
+/* The first iPhone SE is 320 wide: a weight like 102,5 at 56/48 does not fit beside the reps and the tick.
+   Below 360 the entry steps down to 44/36, a further exception to the type scale. */
+@media (max-width:359px){
+  .entry{gap:6px}
+  .pocket{padding:8px 10px}
+  .fig{font-size:44px;line-height:44px}
+  .fig.is-long{font-size:36px;line-height:40px}
+  .go{width:56px;height:56px;border-radius:28px}
+}
 
 /* ---------- the barbell ---------- */
 .b-chrome{fill:var(--chrome)} .b-steel{fill:var(--steel)} .b-collar{fill:var(--steel-dark)}

@@ -1205,7 +1205,7 @@ function renderProgress(root){
       h("span",{class:"hero-num"}, String(Math.round(top.best)), h("span",{class:"hero-unit"}, NB+"кг")),
       h("span",{class:"hero-sub"}, (bodyLift(ex) ? "Максимум с весом тела" : "Расчётный максимум")+(gain>0 ? " · +"+gain+NB+"кг за"+NB+weeksAgo(top.firstAt||top.at) : "")),
       loadArt(ex, top.w, {cls:"is-ink"}) ? h("span",{class:"hero-art", html:loadArt(ex, top.w, {cls:"is-ink"})}) : null,
-      top.r ? h("span",{class:"hero-cap"}, "Лучший подход: "+setXR(top.w, top.r)) : null));
+      top.r ? h("span",{class:"hero-cap"}, "Лучший подход: "+setXR(top.w, top.r, ex)) : null));
   }
   var rest=bests.filter(function(o){ return o!==top; }).slice(0,8);
   if(rest.length){
