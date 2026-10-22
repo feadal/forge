@@ -1033,6 +1033,29 @@ function generateProgram(input){
     s.w[m]++;
   }
 
+  // 3b. Chest, back and legs come before the small groups: lift them towards 10 weekly sets with sets
+  // taken from the smallest muscles of the same session. Only set counts move; every session keeps
+  // its muscles and its number of exercises.
+  const FLOOR = 10, MAIN = ["chest","lats","quads"];
+  const DONORS = ["core","traps","calves","rdelt","biceps","triceps","sdelt","glutes","hams","upback"];
+  const nEx = (s,m)=> Math.min(s.slot[m], exCount(s.w[m]));
+  for(const m of MAIN){
+    if(!live(m)) continue;
+    for(let guard=0; guard<50 && total(m) < Math.min(FLOOR, vol[m]); guard++){
+      // A session that trains m and has room in its exercises for one more set of it.
+      const ss = sess.filter(s=> s.w[m]!=null && s.w[m]+1 <= 5*s.slot[m] && nEx(s,m)===Math.min(s.slot[m], exCount(s.w[m]+1)))
+        .sort((x,y)=> x.w[m]-y.w[m]);
+      let done = false;
+      for(const s of ss){
+        if(sum(s.w) < cap){ s.w[m]++; done = true; break; }
+        // Full session: a small muscle gives up a set, keeping at least 2 and its exercise count.
+        const d = DONORS.find(k=> s.w[k]!=null && s.w[k] > 2 && nEx(s,k)===Math.min(s.slot[k], exCount(s.w[k]-1)));
+        if(d){ s.w[d]--; s.w[m]++; done = true; break; }
+      }
+      if(!done) break;
+    }
+  }
+
   // 4. Exercises.
   const days = split.days.map((d, di)=>{
     const usedPat = new Set();
@@ -1054,6 +1077,10 @@ function generateProgram(input){
   const skipped = MUSCLES.filter(m=> vol[m]>0 && !pats[m]);
   // Under 70% of the target: the sessions had no room for more.
   const shortfall = MUSCLES.filter(m=> vol[m]>0 && pats[m] && achieved[m] < 0.7*vol[m]);
+  // Main muscles still under 9 sets after 3b: the only shortfall worth telling the user about.
+  // For the user the back is lats and upper back together.
+  const sets = (m)=> m==="lats" ? achieved.lats+achieved.upback : achieved[m];
+  const thin = MAIN.filter(m=> live(m) && vol[m] >= 9 && sets(m) < 9);
 
   return {
     meta:{split:split.name, days:input.days, goal:input.goal, level:input.level, minutes:input.minutes, legs:input.legs},
@@ -1067,16 +1094,21 @@ function generateProgram(input){
       : "Добавляй по повтору в рамках диапазона. Выбил верх во всех подходах — прибавь вес: 2,5 кг на базе, 1–2 кг на изоляции.",
     skipped,
     shortfall,
-    notes: buildNotes(input, shortfall, achieved, vol),
+    notes: buildNotes(input, thin),
     limitNotes: (input.limits||[]).map(k=> LIMITS[k] ? {title:LIMITS[k].ru, note:LIMITS[k].note} : null).filter(Boolean)
   };
 }
 
-function buildNotes(input, shortfall, achieved, target){
+function buildNotes(input, thin){
   const notes=[];
   if(!input.legs) notes.push("Ноги исключены: программа только на верх.");
-  if(shortfall.length) notes.push("Меньше нормы подходов в неделю: "+
-    shortfall.map(m=> MUSCLE_RU[m].toLowerCase()+" "+achieved[m]+" из "+target[m]).join(", ")+".");
+  // One short line instead of a list: who is under 9 sets and what would help.
+  if(thin.length){
+    const TO={chest:"груди", lats:"спине", quads:"ногам"};
+    const who=thin.map(m=>TO[m]), list=who.length>1 ? who.slice(0,-1).join(", ")+" и "+who[who.length-1] : who[0];
+    const help=input.minutes<=45 ? "Помогут тренировки подольше." : input.days<=2 ? "Поможет ещё один день." : "Помогут ещё один день или тренировки подольше.";
+    notes.push(list.charAt(0).toUpperCase()+list.slice(1)+" меньше 9 подходов в неделю. "+help);
+  }
   // The same words the questionnaire used for these choices.
   const EMPH_RU={chest:"грудь", lats:"спина", sdelt:"плечи", biceps:"бицепс", triceps:"трицепс", quads:"ноги", glutes:"ягодицы", core:"пресс"};
   const emph=(input.emphasis||[]).map(m=>EMPH_RU[m]||MUSCLE_RU[m]).filter(Boolean);
