@@ -4,7 +4,7 @@
 // POST /ping   once a day the app sends a random install number, so active installs can be counted.
 // /stats       the owner's page with those counts. The password is the STATS_KEY secret; a signed
 //              cookie keeps the owner signed in for 30 days, so no secret ever sits in the address.
-import { statsPage, loginPage } from "./stats.js";
+import { statsPage, loginPage, noticePage } from "./stats.js";
 
 const MAX_Q = 600;            // characters in a question
 const MAX_TURNS = 6;          // earlier messages kept for follow-up questions
@@ -14,6 +14,7 @@ const MAX_BODY = 2000000;
 const MIME = ["image/jpeg", "image/png", "image/webp"];
 const BUDGET = 30000;         // ms for all models together; the app gives up at 35 s
 const PER_MODEL = 12000;      // ms for one model before moving on
+const BLOCKS = ["SAFETY", "PROHIBITED_CONTENT", "BLOCKLIST", "SPII", "RECITATION", "IMAGE_SAFETY"];
 const PHOTO_Q = "Что на фото? Оцени порцию, калории, белки, жиры и углеводы.";
 
 const RULES = `Ты помощник в приложении для тренировок и питания FORGE.
@@ -49,9 +50,8 @@ export default {
 
     // Two limits: one per address so a single phone cannot drain the quota, one for everyone
     // so the free Gemini quota is not exceeded. Both are approximate (per Cloudflare location).
-    const ip = req.headers.get("CF-Connecting-IP") || "unknown";
-    if (env.PER_USER && !(await env.PER_USER.limit({ key: ip })).success) return reply(429, { err: "rate" });
-    if (env.ALL && !(await env.ALL.limit({ key: "all" })).success) return reply(429, { err: "busy" });
+    // The shared one is charged only for a valid question, so junk cannot use it up.
+    if (env.PER_USER && !(await env.PER_USER.limit({ key: clientKey(req) })).success) return reply(429, { err: "rate" });
 
     const raw = await req.text();
     if (raw.length > MAX_BODY) return reply(413, { err: "size" });
@@ -59,6 +59,7 @@ export default {
     try { msg = clean(JSON.parse(raw)); } catch { msg = null; }
     if (!msg) return reply(400, { err: "input" });
     if (!env.GEMINI_API_KEY) return reply(500, { err: "config" });
+    if (env.ALL && !(await env.ALL.limit({ key: "all" })).success) return reply(429, { err: "busy" });
 
     const parts = [];
     if (msg.img) parts.push({ inlineData: msg.img });
@@ -105,16 +106,33 @@ async function ask(key, model, body, ms) {
     return { err: "timeout", retry: true };
   }
   if (!res.ok) {
-    console.log("gemini", model, res.status, (await res.text()).slice(0, 300));
+    console.log("gemini", model, res.status, (await res.text().catch(() => "")).slice(0, 300));
     return { err: res.status === 429 || res.status === 503 ? "busy" : "upstream", retry: true };
   }
+  // A body cut off by the timeout or not JSON is a transport problem: try the next model.
   const data = await res.json().catch(() => null);
-  const out = ((data && data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts) || [])
+  if (!data) return { err: "upstream", retry: true };
+  const c = data.candidates && data.candidates[0];
+  const out = ((c && c.content && c.content.parts) || [])
     .filter((p) => typeof p.text === "string" && !p.thought)
     .map((p) => p.text)
     .join("");
   const a = plain(out);
-  return a ? { a } : { err: "blocked", retry: false };
+  if (a) return { a };
+  // Only a real block ends the search; an empty answer for any other reason gets another model.
+  const blocked = (data.promptFeedback && data.promptFeedback.blockReason) || (c && BLOCKS.includes(c.finishReason));
+  return blocked ? { err: "blocked", retry: false } : { err: "upstream", retry: true };
+}
+
+// Rate-limit key for a client. An IPv6 host usually owns a whole /64 and can change address at
+// will, so IPv6 is counted per /64; IPv4 per address.
+export function clientKey(req) {
+  const ip = req.headers.get("CF-Connecting-IP") || "unknown";
+  if (ip.indexOf(":") < 0) return ip;
+  const [head, tail] = ip.split("::");
+  const a = head ? head.split(":") : [], b = tail != null && tail !== "" ? tail.split(":") : [];
+  const full = tail != null ? a.concat(Array(8 - a.length - b.length).fill("0"), b) : a;
+  return full.slice(0, 4).map((g) => (parseInt(g, 16) || 0).toString(16)).join(":");
 }
 
 // Days are counted in Moscow time (UTC+3, no daylight saving), the app's audience.
@@ -123,17 +141,21 @@ export function mskDay(t = Date.now(), back = 0) {
 }
 
 async function ping(req, env, reply) {
-  const ip = req.headers.get("CF-Connecting-IP") || "unknown";
-  if (env.PING && !(await env.PING.limit({ key: ip })).success) return reply(429, { err: "rate" });
+  if (env.PING && !(await env.PING.limit({ key: clientKey(req) })).success) return reply(429, { err: "rate" });
   let b = null;
   try { b = JSON.parse((await req.text()).slice(0, 500)); } catch {}
   if (!b || typeof b.id !== "string" || !INSTALL_ID.test(b.id)) return reply(400, { err: "input" });
   if (!env.DB) return reply(500, { err: "config" });
   const id = b.id.toLowerCase().replace(/-/g, ""), day = mskDay(), ready = b.ready === true ? 1 : 0;
-  await env.DB.batch([
-    env.DB.prepare("INSERT INTO installs (id, first_day, last_day, ready) VALUES (?1, ?2, ?2, ?3) ON CONFLICT(id) DO UPDATE SET last_day = ?2, ready = MAX(ready, ?3)").bind(id, day, ready),
-    env.DB.prepare("INSERT OR IGNORE INTO days (day, id) VALUES (?1, ?2)").bind(day, id),
-  ]);
+  try {
+    await env.DB.batch([
+      env.DB.prepare("INSERT INTO installs (id, first_day, last_day, ready) VALUES (?1, ?2, ?2, ?3) ON CONFLICT(id) DO UPDATE SET last_day = ?2, ready = MAX(ready, ?3)").bind(id, day, ready),
+      env.DB.prepare("INSERT OR IGNORE INTO days (day, id) VALUES (?1, ?2)").bind(day, id),
+    ]);
+  } catch (e) {
+    console.log("ping db", String(e).slice(0, 200));
+    return reply(503, { err: "db" });
+  }
   return reply(200, { ok: true });
 }
 
@@ -150,8 +172,10 @@ async function stats(req, env) {
   const token = await sign(env.STATS_KEY);
 
   if (req.method === "POST") {
-    const ip = req.headers.get("CF-Connecting-IP") || "unknown";
-    if (env.LOGIN && !(await env.LOGIN.limit({ key: ip })).success) return page(loginPage("Слишком много попыток. Подожди минуту."), 429);
+    // Per client, and a cap for everyone together so rotating addresses cannot guess faster.
+    const busy = (env.LOGIN && !(await env.LOGIN.limit({ key: clientKey(req) })).success) ||
+      (env.LOGIN_ALL && !(await env.LOGIN_ALL.limit({ key: "all" })).success);
+    if (busy) return page(loginPage("Слишком много попыток. Подожди минуту."), 429);
     const form = await req.formData().catch(() => null);
     const pw = form ? String(form.get("password") || "") : "";
     if (!same(pw, env.STATS_KEY)) return page(loginPage("Неверный пароль."), 401);
@@ -164,14 +188,19 @@ async function stats(req, env) {
 
   const now = Date.now(), d = (n) => mskDay(now, n);
   const one = (sql, ...a) => env.DB.prepare(sql).bind(...a).first();
-  const [all, today, week, month, daily, asks] = await Promise.all([
+  let rows;
+  try { rows = await Promise.all([
     one("SELECT COUNT(*) AS total, COALESCE(SUM(ready), 0) AS ready, COALESCE(SUM(first_day >= ?1), 0) AS new7 FROM installs", d(6)),
     one("SELECT COUNT(*) AS n FROM days WHERE day = ?1", d(0)),
     one("SELECT COUNT(DISTINCT id) AS n FROM days WHERE day >= ?1", d(6)),
     one("SELECT COUNT(DISTINCT id) AS n FROM days WHERE day >= ?1", d(29)),
     env.DB.prepare("SELECT day, COUNT(*) AS n FROM days WHERE day >= ?1 GROUP BY day").bind(d(29)).all(),
     env.DB.prepare("SELECT day, n FROM asks WHERE day >= ?1").bind(d(29)).all(),
-  ]);
+  ]); } catch (e) {
+    console.log("stats db", String(e).slice(0, 200));
+    return page(noticePage("База недоступна, попробуй позже."), 503);
+  }
+  const [all, today, week, month, daily, asks] = rows;
   const byDay = Object.fromEntries((daily.results || []).map((r) => [r.day, r.n]));
   const askBy = Object.fromEntries((asks.results || []).map((r) => [r.day, r.n]));
   const series = Array.from({ length: 30 }, (_, i) => { const day = d(29 - i); return { day, users: byDay[day] || 0, asks: askBy[day] || 0 }; });

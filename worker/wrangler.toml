@@ -48,3 +48,11 @@ namespace_id = "1004"
   [ratelimits.simple]
   limit = 5
   period = 60
+
+# Sign-in attempts from everyone together: 20 a minute, so rotating addresses cannot guess faster.
+[[ratelimits]]
+name = "LOGIN_ALL"
+namespace_id = "1005"
+  [ratelimits.simple]
+  limit = 20
+  period = 60

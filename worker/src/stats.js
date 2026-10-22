@@ -108,27 +108,37 @@ export function statsPage(s) {
 </html>`;
 }
 
-// Shown until the owner signs in. The password manager on the phone can fill it.
-export function loginPage(error) {
+// The frame shared by the sign-in form and the outage message.
+function shell(title, inner) {
   return `<!doctype html>
 <html lang="ru">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex">
-<title>FORGE · вход</title>
+<title>${title}</title>
 <style>${CSS}</style>
 </head>
 <body>
 <main>
 <h1>Пользователи</h1>
-<form class="login" method="post" action="/stats">
+${inner}
+</main>
+</body>
+</html>`;
+}
+
+// Shown when the counts cannot be read.
+export function noticePage(text) {
+  return shell("FORGE · пользователи", `<p class="sub" role="alert">${text}</p>`);
+}
+
+// Shown until the owner signs in. The password manager on the phone can fill it.
+export function loginPage(error) {
+  return shell("FORGE · вход", `<form class="login" method="post" action="/stats">
   <label for="pw">Пароль</label>
   <input id="pw" name="password" type="password" autocomplete="current-password" autofocus required${error ? ' aria-invalid="true" aria-describedby="err"' : ""}>
   ${error ? `<p class="err" id="err" role="alert">${error}</p>` : ""}
   <button type="submit">Войти</button>
-</form>
-</main>
-</body>
-</html>`;
+</form>`);
 }
