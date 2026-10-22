@@ -351,7 +351,7 @@ function ghostFor(p, si){
   if(si==="w"){
     var lw=lastResult(p.x.id,"w");
     if(lw) return {w:lw.w, r:lw.r};
-    var first=ghostFor(p,0);
+    var first=planned(p,0);
     if(loadKind(p.x)==="bw") return {w:0, r:8};
     if(first && first.w){
       var half=Math.round(first.w*0.5/2.5)*2.5;
@@ -365,6 +365,13 @@ function ghostFor(p, si){
   }
   var last=lastResult(p.x.id, si);
   return last ? {w:last.w, r:last.r} : null;
+}
+// What a not-yet-done set will be logged as: values already set on it (the finder, an edit),
+// else the suggestion. toggleSet logs exactly this, so rows and previews show it too.
+function planned(p, si){
+  var rec=cur(p, si)||{}, g=ghostFor(p, si);
+  var w=rec.w!=null ? rec.w : (g ? g.w : null), r=rec.r!=null ? rec.r : (g ? g.r : null);
+  return w==null && r==null ? null : {w:w, r:r};
 }
 function hasHistory(id){
   for(var k in S.log){ var p=k.split("|"); if(p[2]===id && S.log[k].done) return true; }
@@ -398,16 +405,20 @@ function beginSession(){
   if(!S.session) S.session={start:Date.now(), week:S.week, day:S.day};
   keepAwake();
 }
+// A set belongs to the open session only if it was ticked after the session began:
+// going back to a finished day must not count that day's old sets again.
+function inSession(r){ return !!(r && r.done && S.session && (r.at||0)>=S.session.start); }
 // Anything ticked in the open session, warm-ups included.
 function sessionTouched(){
   var s=S.session; if(!s) return false;
   var pre=s.week+"|"+s.day+"|";
-  for(var k in S.log) if(k.indexOf(pre)===0 && S.log[k].done) return true;
+  for(var k in S.log) if(k.indexOf(pre)===0 && inSession(S.log[k])) return true;
   return false;
 }
-function guardSession(text){
+// then: what was asked. If finishing leaves nothing to save (only warm-ups), it goes on at once.
+function guardSession(text, then){
   if(S.session && sessionTouched()){
-    confirmSheet({title:"Идёт тренировка", text:text, ok:"Завершить тренировку", cancel:"Вернуться", onOk:askFinish});
+    confirmSheet({title:"Идёт тренировка", text:text, ok:"Завершить тренировку", cancel:"Вернуться", onOk:function(){ askFinish(then); }});
     return true;
   }
   if(S.session){ S.session=null; S.rest=null; save(); }
@@ -420,7 +431,7 @@ function sessionStats(){
     total+=p.n; var any=false;
     for(var si=0; si<p.n; si++){
       var r=S.log[lkey(s.week,s.day,p.x.id,si)];
-      if(r && r.done){ sets++; any=true; if(r.t!=="w") ton+=(r.w||0)*(r.r||0); }
+      if(inSession(r)){ sets++; any=true; if(r.t!=="w") ton+=(r.w||0)*(r.r||0); }
     }
     if(any) ex++;
   });
@@ -451,14 +462,21 @@ document.addEventListener("visibilitychange", function(){
 });
 
 // What comes after this set: shown on the rest platform, loaded onto its bar.
+// Sets can be ticked out of order, so "next" is the first one still open, as the set list shows it.
+function firstOpen(p){
+  var wr=cur(p,"w");
+  if(p.warm && !(wr && wr.done) && !exProgress(p).done) return "w";
+  for(var i=0;i<p.n;i++){ var r=cur(p,i); if(!(r && r.done)) return i; }
+  return null;
+}
 function restNext(p, si){
-  var n=si==="w" ? 0 : si+1;
-  if(n<p.n){ var g=ghostFor(p, n); return {title:"Подход "+(n+1), w:g?g.w:null, r:g?g.r:null, bar:isBarbell(p.x)}; }
+  var n=firstOpen(p);
+  if(n!=null){ var g=planned(p, n); return {title:n==="w" ? "Разминка" : "Подход "+(n+1), w:g?g.w:null, r:g?g.r:null, bar:isBarbell(p.x)}; }
   var plan=planFor(S.day, S.week);
   for(var i=0;i<plan.length;i++){
     var q=plan[i];
     if(q.x.id===p.x.id || exProgress(q).complete) continue;
-    var wr=cur(q,"w"), s0=q.warm && !(wr && wr.done) ? "w" : 0, g2=ghostFor(q, s0);
+    var s0=firstOpen(q), g2=planned(q, s0);
     return {title:q.x.name, w:g2?g2.w:null, r:g2?g2.r:null, bar:isBarbell(q.x), x:q.x};
   }
   return null;
@@ -478,10 +496,11 @@ function markDone(p, si, w, r){
 function commitDone(p, si, w, r){
   var k=lkey(S.week, S.day, p.x.id, si);
   var rec=S.log[k]||{};
+  beginSession();
   rec.w=w; rec.r=r; rec.done=true; rec.at=Date.now();
   if(si==="w") rec.t="w";
   S.log[k]=rec;
-  beginSession(); buzz(14); unlockAudio();
+  buzz(14); unlockAudio();
   if(exProgress(p).complete){
     var nxt=planFor(S.day, S.week).filter(function(q){ return !exProgress(q).complete; })[0];
     S.focus=nxt ? nxt.x.id : p.x.id;
@@ -506,9 +525,9 @@ function toggleSet(p, si){
 }
 
 // No "are you sure": the workout is saved at once and the summary offers a way back.
-function askFinish(){
+function askFinish(then){
   var st=sessionStats(); if(!st) return;
-  if(!st.sets){ S.session=null; S.rest=null; dropAwake(); save(); render(); return; }
+  if(!st.sets){ S.session=null; S.rest=null; dropAwake(); save(); render(); if(then) then(); return; }
   finishSession();
 }
 function finishSession(){
@@ -519,7 +538,7 @@ function finishSession(){
     var best=0, bestSet=null;
     for(var si=0; si<p.n; si++){
       var r=S.log[lkey(s.week,s.day,p.x.id,si)];
-      if(!isMaxSet(r)) continue;
+      if(!isMaxSet(r) || !inSession(r)) continue;
       if(e1rm(r.w,r.r)>best){ best=e1rm(r.w,r.r); bestSet={w:r.w, r:r.r}; }
       if(isBarbell(p.x) && r.w>=BAR_KG && (!heaviest || r.w>heaviest.w)) heaviest={w:r.w, r:r.r, name:p.x.name};
     }
@@ -594,7 +613,8 @@ function openSheet(fn, label){
   sheetFn=fn; sheetLabel=label||""; renderSheet();
 }
 function closeSheet(silent){
-  if(pad && !silent){ padSave(); save(); }
+  // Closing keeps what was typed; a keypad opened and closed untouched writes nothing.
+  if(pad && !silent && pad.dirty){ padSave(); save(); }
   sheetFn=null; pad=null; finder=null;
   var root=$("sheet");
   if(root){ root.className=""; root.innerHTML=""; }
@@ -661,10 +681,12 @@ function confirmSheet(o){
 var pad=null;
 function openPad(p, si, field){
   var rec=cur(p, si)||{}, g=ghostFor(p, si);
+  // With nothing known, a barbell starts at the empty bar: the 20 the set row shows.
+  var gw=g && g.w!=null ? g.w : (isBarbell(p.x) ? BAR_KG : null);
   pad={p:p, si:si, field:field||"w", done:!!rec.done,
-    w:fmt(rec.w!=null ? rec.w : (g ? g.w : null)),
+    w:fmt(rec.w!=null ? rec.w : gw),
     r:rec.r!=null ? String(rec.r) : (g && g.r!=null ? String(g.r) : ""),
-    ghost:{w:rec.w==null && !!g, r:rec.r==null && !!g},
+    ghost:{w:rec.w==null && gw!=null, r:rec.r==null && !!g},
     t:si==="w" ? "w" : (rec.t||null), fresh:{w:true, r:true}};
   openSheet(padView, p.x.name+", "+(si==="w" ? "разминка" : "подход "+(si+1)));
 }
@@ -676,26 +698,27 @@ function typeIn(state, ch){
   if(ch==="del") v=v.slice(0,-1);
   else if(ch===","){ if(f==="w" && v.indexOf(",")<0) v=(v||"0")+","; }
   else { if(v==="0") v=""; if(v.replace(",","").length<5) v+=ch; }
-  state[f]=v; buzz(6); renderSheet();
+  state[f]=v; state.dirty=true; buzz(6); renderSheet();
 }
 function stepIn(state, d){
   var f=state.field, v=num(state[f])||0;
   v=Math.max(0, Math.round((v+d)*100)/100);
   state[f]=f==="w" ? fmt(v) : String(Math.round(v));
   state.fresh[f]=true; if(state.ghost) state.ghost[f]=false;
-  buzz(6); renderSheet();
+  state.dirty=true; buzz(6); renderSheet();
 }
 function padSave(){
   var k=lkey(S.week, S.day, pad.p.x.id, pad.si);
-  var rec=S.log[k]||{};
-  rec.w=num(pad.w); rec.r=num(pad.r)!=null ? Math.round(num(pad.r)) : null; rec.t=pad.t;
+  var rec=S.log[k]||{}, r=num(pad.r)!=null ? Math.round(num(pad.r)) : null;
+  // A done set keeps its reps if the field was left empty.
+  rec.w=num(pad.w); rec.r=r==null && rec.done ? rec.r : r; rec.t=pad.t;
   S.log[k]=rec;
   return rec;
 }
 function padNext(){
   if(pad.field==="w"){ pad.field="r"; renderSheet(); return; }
+  if(num(pad.r)==null){ pad.err="Введи повторы"; buzz([8,40,8]); renderSheet(); return; }
   var p=pad.p, si=pad.si, rec=padSave();
-  if(rec.r==null){ pad.err="Введи повторы"; buzz([8,40,8]); renderSheet(); return; }
   sheetFn=null; closeSheet(true);
   if(!rec.done) markDone(p, si, rec.w, rec.r); else { save(); render(); }
 }
@@ -739,12 +762,12 @@ function padView(){
           h("span",{class:"sh-title"}, title), pad.t ? h("span",{class:"sh-type"}, "· "+typeLabel(pad.t).toLowerCase()) : null, icon("down","i-sm"))
         : h("div",{class:"sh-titles"}, h("span",{class:"sh-title"}, title)),
       last ? h("button",{class:"prev", type:"button", "aria-label":"Взять прошлый результат: "+setXR(last.w,last.r),
-        onclick:function(){ pad.w=fmt(last.w); pad.r=String(last.r); pad.ghost={w:false,r:false}; pad.fresh={w:true,r:true}; buzz(8); renderSheet(); }},
+        onclick:function(){ pad.w=fmt(last.w); pad.r=String(last.r); pad.ghost={w:false,r:false}; pad.fresh={w:true,r:true}; pad.dirty=true; buzz(8); renderSheet(); }},
         icon("again","i-sm"), setXR(last.w, last.r)) : null),
     pad.typeOpen ? h("div",{class:"seg seg-types", role:"radiogroup", "aria-label":"Тип подхода"}, TYPE_ORDER.map(function(t){
       var on=pad.t===t;
       return h("button",{class:"seg-item"+(on?" is-on":""), type:"button", role:"radio", "aria-checked":String(on),
-        onclick:function(){ pad.t=t; pad.typeOpen=false; buzz(6); renderSheet(); }}, typeLabel(t));
+        onclick:function(){ pad.t=t; pad.typeOpen=false; pad.dirty=true; buzz(6); renderSheet(); }}, typeLabel(t));
     })) : null,
     h("div",{class:"sh-value"}, slot(pad,"w","кг"), h("span",{class:"times","aria-hidden":"true"},"×"), slot(pad,"r",null)),
     pad.err ? h("p",{class:"field-error sheet-err", role:"alert"}, pad.err) : null,
@@ -760,7 +783,7 @@ function finderCalc(){
   var w=num(finder.w), r=num(finder.r), rir=finder.rir;
   if(!(w>0 && r>0 && rir!=null)) return null;
   var e=w*(1+(r+rir)/30), target=midReps(finder.x.reps);
-  return {w:Math.max(2.5, Math.round(e/(1+(target+2)/30)/2.5)*2.5), r:target};
+  return {w:Math.max(isBarbell(finder.x) ? BAR_KG : 2.5, Math.round(e/(1+(target+2)/30)/2.5)*2.5), r:target};
 }
 function openFinder(x){ finder={x:x, w:"", r:"", rir:null, field:"w", fresh:{w:true, r:true}}; openSheet(finderView, "Стартовый вес: "+x.name); }
 function finderView(){
@@ -829,7 +852,7 @@ function sessionPill(){
   return h("div",{class:"session", role:"group", "aria-label":"Тренировка идёт, сделано "+st.sets+" из "+st.total},
     h("span",{class:"clock", id:"dock-clock"}, clock(st.ms)),
     rack,
-    btn("finish", "Завершить", askFinish));
+    btn("finish", "Завершить", function(){ askFinish(); }));
 }
 function platform(){
   var left=restLeft(), nx=S.rest.next;
@@ -937,7 +960,7 @@ function doneRow(p, si, rec){
       "aria-label":(si==="w"?"Разминка выполнена":"Подход "+(si+1)+" выполнен")+", снять отметку"}, icon("tick","i-mark")));
 }
 function todoRow(p, si){
-  var g=ghostFor(p, si);
+  var g=planned(p, si);
   return h("div",{class:"set todo", role:"listitem"},
     h("span",{class:"lab"}, setLabel(si)),
     h("button",{class:"val", type:"button", "data-fk":"val-"+p.x.id+"-"+si, onclick:function(){ openPad(p, si, "w"); }, "aria-label":setLabel(si)+(g && g.r!=null ? ": "+setXR(g.w,g.r,p.x)+", предложено" : "")+". Изменить"},
@@ -980,7 +1003,7 @@ function activeSet(p, si){
 }
 
 function openDayPicker(){
-  if(guardSession("Заверши её, прежде чем выбирать другой день.")) return;
+  if(guardSession("Заверши её, прежде чем выбирать другой день.", openDayPicker)) return;
   openSheet(function(){
     var done=doneDays(S.week);
     return h("div",{class:"picker"},
@@ -1116,18 +1139,25 @@ function segField(label, opts, value, onPick){
 
 /* ---------- screens: progress ---------- */
 
+// Gain is counted from the best set of the first workout, so lighter sets early in that workout
+// do not show up as progress.
+var FIRST_WORKOUT_MS=6*3600e3;
 function bestByExercise(){
   var out={};
   function take(id, r){
     if(!isMaxSet(r)) return;
     var e=e1rm(r.w, r.r); if(!e) return;
-    var o=out[id]||(out[id]={id:id, best:0, first:null, at:0});
+    var o=out[id]||(out[id]={id:id, best:0, first:null, firstAt:Infinity, at:0, sets:[]});
     if(e>o.best){ o.best=e; o.at=r.at||0; o.w=r.w; o.r=r.r; }
-    if(o.first==null || (r.at||0)<o.firstAt){ o.first=e; o.firstAt=r.at||0; }
+    o.firstAt=Math.min(o.firstAt, r.at||0); o.sets.push({e:e, at:r.at||0});
   }
   for(var k in S.log) take(k.split("|")[2], S.log[k]);
   S.past.forEach(function(r){ take(r.id, r); });
-  return Object.keys(out).map(function(k){ return out[k]; });
+  return Object.keys(out).map(function(k){
+    var o=out[k];
+    o.first=0; o.sets.forEach(function(x){ if(x.at-o.firstAt<FIRST_WORKOUT_MS) o.first=Math.max(o.first, x.e); });
+    delete o.sets; return o;
+  });
 }
 function weeksAgo(ts){ var n=Math.max(1, Math.round((Date.now()-ts)/(7*864e5))); return n+NB+plural(n,"неделю","недели","недель"); }
 function renderProgress(root){
@@ -1645,11 +1675,11 @@ function startWizard(){
   S.draft={}; S.wq=0; S.edit=null; S.rerun=false; S.step="wizard"; wizErr={}; save(); go(""); render();
 }
 function rerunWizard(){
-  if(guardSession("Заверши её, прежде чем пересобирать программу.")) return;
+  if(guardSession("Заверши её, прежде чем пересобирать программу.", rerunWizard)) return;
   S.draft=JSON.parse(JSON.stringify(S.profile)); S.wq=0; S.edit=null; S.rerun=true; S.rerunFrom=route(); S.step="wizard"; wizErr={}; save(); go(""); render();
 }
 function editStep(id){
-  if(PROGRAM_STEPS[id] && guardSession("Заверши её, прежде чем менять программу.")) return;
+  if(PROGRAM_STEPS[id] && guardSession("Заверши её, прежде чем менять программу.", function(){ editStep(id); })) return;
   S.draft=JSON.parse(JSON.stringify(S.profile)); S.edit=id; S.step="wizard"; wizErr={}; save(); go(""); render();
 }
 function wizStepId(){ return S.edit || FLOW[S.wq]; }
@@ -1713,6 +1743,8 @@ function applyEdit(id){
   S.profile=p;
   if(PROGRAM_STEPS[id]){
     buildProgram(p);
+    // With fewer days the open day may be gone or already done: take the first open one.
+    if(S.day>=S.program.days.length || doneDays(S.week)[S.day]) advance(S.week, -1);
     if(S.day>=S.program.days.length) S.day=0;
     S.focus=null;
   }
