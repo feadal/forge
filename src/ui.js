@@ -122,7 +122,8 @@ var ICON={
   refresh:'<path d="M19 12a7 7 0 1 1-2.2-5.1"/><path d="M17.4 3.2 16.8 6.9l-3.7-.6"/>',
   ask:'<path d="M12 4.5c4.7 0 8 2.9 8 6.6s-3.3 6.6-8 6.6c-.9 0-1.8-.1-2.6-.3L5 19.5l1-3.4C4.7 14.9 4 13.1 4 11.1 4 7.4 7.3 4.5 12 4.5Z"/>',
   photo:'<path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2.3l1.4-2h5.6l1.4 2h2.3A1.5 1.5 0 0 1 20 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5z"/><circle cx="12" cy="12.5" r="3.5"/>',
-  up:'<path d="M12 19V5.5M6.5 11 12 5.5 17.5 11"/>'
+  up:'<path d="M12 19V5.5M6.5 11 12 5.5 17.5 11"/>',
+  compose:'<path d="M11.5 4.5h-5a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-5"/><path d="M17.6 3.9a1.7 1.7 0 0 1 2.5 2.5l-7.4 7.4-3.2.8.8-3.2z"/>'
 };
 function icon(name, cls){
   return h("span",{class:"ic"+(cls?" "+cls:""), "aria-hidden":"true",
@@ -1360,17 +1361,19 @@ function renderSettings(root){
 
 /* ---------- ask: questions and food photos go to the proxy in worker/, nothing else leaves the phone ---------- */
 
-var chat=[], askDraft="", askImg=null, askBusy=false, askErr=null, askCtx=null;
+var chat=[], askDraft="", askImg=null, askBusy=false, askErr=null, askCtx=null, askGen=0;
 var ASK_ERR={offline:"Нет интернета.", net:"Сервер не ответил. Попробуй ещё раз.", timeout:"Сервер не ответил. Попробуй ещё раз.",
   rate:"Слишком много вопросов подряд. Подожди минуту.", busy:"Помощник занят. Попробуй через минуту.",
   blocked:"На это ответить не могу.", size:"Фото слишком большое.", fail:"Не получилось. Попробуй ещё раз."};
+// A new chat drops the conversation and any answer still on its way; the typed text and photo stay.
+function newChat(){ chat=[]; askErr=null; askBusy=false; askCtx=null; askGen++; }
 function askOn(){ return !!ASK_URL && S.ask!=="off"; }
 function askBtn(){ return btn("icon-btn", icon("ask"), function(){ openAsk(null); }, {"aria-label":"Спросить"}); }
 function headAct(){ return askOn() ? h("div",{class:"head-acts"}, askBtn(), gearBtn()) : gearBtn(); }
 // null keeps the current conversation; a context about another exercise (or none, {}) starts a new one.
 function openAsk(ctx){
   var was=askCtx && askCtx.exercise, now=ctx && ctx.exercise;
-  if(ctx && was!==now){ chat=[]; askErr=null; }
+  if(ctx && was!==now) newChat();
   if(ctx || !chat.length) askCtx=ctx;
   go("ask");
 }
@@ -1412,7 +1415,9 @@ function askSend(text){
   askImg=null; askBusy=true; askErr=null;
   if(document.activeElement) document.activeElement.blur();
   render(); askScroll();
+  var gen=askGen;
   askFetch({q:q, img:img ? {mime:img.mime, data:img.data} : null, hist:hist, ctx:ctx}, function(err, a){
+    if(gen!==askGen) return;
     askBusy=false;
     if(err){
       // Put the question back so nothing typed or picked is lost.
@@ -1434,7 +1439,13 @@ function askFetch(payload, done){
 function askScroll(){ window.scrollTo(0, document.documentElement.scrollHeight); }
 function renderAsk(root){
   var ex=askCtx && askCtx.exercise;
-  root.appendChild(pageHead("Спросить", ex ? "Про «"+ex+"»" : null, {back:true}));
+  var empty=!chat.length && !askBusy && !askErr;
+  root.appendChild(pageHead("Спросить", ex ? "Про «"+ex+"»" : null, {back:true,
+    action:empty ? null : btn("icon-btn", icon("compose"), function(){
+      newChat(); render();
+      // The button is gone now, so hand focus to the title for VoiceOver and keyboards.
+      var t=document.querySelector("#app .head-title"); if(t){ t.setAttribute("tabindex","-1"); t.focus(); }
+    }, {"aria-label":"Новый чат"})}));
   var log=h("div",{class:"chat", "aria-live":"polite"});
   // Ideas hide once a photo is attached: a tapped idea would carry the photo with it.
   if(!chat.length && !askBusy && !askImg){
