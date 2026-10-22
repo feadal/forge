@@ -341,11 +341,11 @@ noscript{display:block;padding:24px var(--m)}
 .field-label{color:var(--ink-2);font-size:15px;line-height:20px}
 .field-error{color:var(--danger);font-size:15px;line-height:20px}
 .seg{display:flex;gap:2px;padding:3px;border-radius:14px;background:var(--band)}
-.seg-item{flex:1;min-height:44px;border-radius:11px;font-weight:600;font-size:15px;line-height:20px;color:var(--ink-2);padding:0 6px}
-.seg-item.is-on{background:var(--seg-on);color:var(--ink);box-shadow:0 1px 3px rgba(var(--shade),.12)}
+.seg-item{flex:1;min-height:44px;border-radius:11px;font-weight:400;font-size:15px;line-height:20px;color:var(--ink-2);padding:0 6px}
+.seg-item.is-on{background:var(--seg-on);color:var(--ink);font-weight:600;box-shadow:0 1px 3px rgba(var(--shade),.12)}
 
 .num-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.num-field{display:grid;gap:8px}
+.num-field,.num-label{display:grid;gap:8px}
 .num-wrap{display:flex;align-items:baseline;gap:4px;min-height:64px;padding:10px 14px;border-radius:var(--r-field);background:var(--band);cursor:text}
 .num-wrap:focus-within{background:var(--accent-tint)}
 .num-input{width:100%;min-width:0;border:1px solid transparent;background:none;padding:0;font-size:28px;line-height:34px;font-weight:800;letter-spacing:-.025em;caret-color:var(--accent)}

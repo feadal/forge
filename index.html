@@ -361,11 +361,11 @@ noscript{display:block;padding:24px var(--m)}
 .field-label{color:var(--ink-2);font-size:15px;line-height:20px}
 .field-error{color:var(--danger);font-size:15px;line-height:20px}
 .seg{display:flex;gap:2px;padding:3px;border-radius:14px;background:var(--band)}
-.seg-item{flex:1;min-height:44px;border-radius:11px;font-weight:600;font-size:15px;line-height:20px;color:var(--ink-2);padding:0 6px}
-.seg-item.is-on{background:var(--seg-on);color:var(--ink);box-shadow:0 1px 3px rgba(var(--shade),.12)}
+.seg-item{flex:1;min-height:44px;border-radius:11px;font-weight:400;font-size:15px;line-height:20px;color:var(--ink-2);padding:0 6px}
+.seg-item.is-on{background:var(--seg-on);color:var(--ink);font-weight:600;box-shadow:0 1px 3px rgba(var(--shade),.12)}
 
 .num-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.num-field{display:grid;gap:8px}
+.num-field,.num-label{display:grid;gap:8px}
 .num-wrap{display:flex;align-items:baseline;gap:4px;min-height:64px;padding:10px 14px;border-radius:var(--r-field);background:var(--band);cursor:text}
 .num-wrap:focus-within{background:var(--accent-tint)}
 .num-input{width:100%;min-width:0;border:1px solid transparent;background:none;padding:0;font-size:28px;line-height:34px;font-weight:800;letter-spacing:-.025em;caret-color:var(--accent)}
@@ -1542,6 +1542,15 @@ var S=normalize(load()||fresh());
 
 /* ---------- small helpers ---------- */
 
+// Screen readers only announce changes to a live region that already exists, and #app is rebuilt
+// on every render, so announcements go through one region kept outside it.
+var liveEl=null;
+function announce(text){
+  if(!liveEl) return;
+  liveEl.textContent="";
+  setTimeout(function(){ liveEl.textContent=text; }, 60);
+}
+
 function $(id){ return document.getElementById(id); }
 function h(tag, props){
   var e=document.createElement(tag);
@@ -1681,7 +1690,8 @@ function barSVG(load, o){
   var kh=H*0.26, kw=8*k;
   if(n) out.push('<g class="plate lock" style="--i:'+n+';--o:0;--s:-1">'+R(xl-kw, cy-kh/2, kw, kh, "b-collar", 2)+'</g>',
                  '<g class="plate lock" style="--i:'+n+';--o:0;--s:1">'+R(xr, cy-kh/2, kw, kh, "b-collar", 2)+'</g>');
-  return '<svg class="bar-art'+(o.cls?" "+o.cls:"")+'" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(o.label!=null ? o.label : barLabel(load))+'">'+out.join("")+'</svg>';
+  var a11y=o.label==="" ? 'aria-hidden="true"' : 'role="img" aria-label="'+esc(o.label!=null ? o.label : barLabel(load))+'"';
+  return '<svg class="bar-art'+(o.cls?" "+o.cls:"")+'" viewBox="0 0 '+W+' '+H+'" '+a11y+'>'+out.join("")+'</svg>';
 }
 
 // Every load gets a picture: the bar with its plates, a dumbbell, a pinned weight stack, a plate on a belt.
@@ -1955,7 +1965,7 @@ var ticker=null;
 function tick(){
   if(!ticker) ticker=setInterval(tick, 1000);
   if(S.rest && restLeft()<=0){
-    S.rest=null; save(); chime(); buzz([18,60,18]); reveal="smooth"; render(); return;
+    S.rest=null; save(); chime(); buzz([18,60,18]); announce("Отдых окончен"); reveal="smooth"; render(); return;
   }
   var t=$("dock-rest"); if(t && S.rest) t.textContent=mmss(restLeft());
   var k=document.querySelector("#dock .b-knurl-fill");
@@ -2104,7 +2114,8 @@ var sheetFn=null;
 // Focus survives re-renders: controls are matched by data-fk, else by name and class.
 function focusKey(el){
   if(!el || el===document.body || !el.getAttribute) return null;
-  return el.getAttribute("data-fk") || ((el.getAttribute("aria-label")||el.textContent||"").trim()+"|"+el.tagName+"|"+el.className);
+  // State classes (is-on and the like) change when a control is used, so they are not part of the key.
+  return el.getAttribute("data-fk") || ((el.getAttribute("aria-label")||el.textContent||"").trim()+"|"+el.tagName+"|"+String(el.className).replace(/\s*\bis-[\w-]+/g,""));
 }
 function refocus(scope, key){
   if(!key || !scope) return false;
@@ -2179,7 +2190,7 @@ function confirmSheet(o){
       o.text ? h("p",{class:"sheet-text"}, o.text) : null,
       btn("btn btn-primary"+(o.danger?" is-danger":""), o.ok, function(){ sheetFn=null; closeSheet(true); o.onOk(); }),
       btn("btn btn-quiet", o.cancel||"Отмена", function(){ closeSheet(); }));
-  });
+  }, o.title);
 }
 
 /* ---------- keypad ---------- */
@@ -2253,7 +2264,7 @@ function keysGrid(state, retLabel, onRet){
     k("4"), k("5"), k("6"),
     h("button",{class:"key fn", type:"button", "aria-label":"Плюс "+fmt(step), onclick:function(){ stepIn(state, step); }}, "+"+fmt(step)),
     k("7"), k("8"), k("9"),
-    h("button",{class:"key ret", type:"button", onclick:onRet}, retLabel),
+    h("button",{class:"key ret", type:"button", "data-fk":"key-ret", onclick:onRet}, retLabel),
     isW ? k(",", ",", null, "Запятая") : h("span",{class:"key is-blank","aria-hidden":"true"}),
     k("0"),
     k("del", icon("del"), null, "Стереть"));
@@ -2403,7 +2414,7 @@ function renderTrain(root){
   var day=S.program.days[S.day], ph=phase(S.week), plan=planFor(S.day, S.week);
   root.appendChild(h("header",{class:"head"},
     h("div",{class:"head-row"},
-      h("h1",{class:"head-title"}, h("button",{class:"title-btn", type:"button", onclick:openDayPicker, "aria-label":day.name+". Выбрать тренировку"},
+      h("h1",{class:"head-title"}, h("button",{class:"title-btn", type:"button", "data-fk":"day-title", onclick:openDayPicker, "aria-label":day.name+". Выбрать тренировку"},
         day.name, icon("down","i-sm"))),
       headAct()),
     h("button",{class:"week", type:"button", onclick:function(){ go("program"); }},
@@ -2431,7 +2442,7 @@ function repMarks(p){
 }
 function exRow(p){
   var pr=exProgress(p);
-  return h("button",{class:"ex"+(pr.complete?" done":pr.done?" started":""), type:"button",
+  return h("button",{class:"ex"+(pr.complete?" done":pr.done?" started":""), type:"button", "data-fk":"ex-"+p.x.id,
       "aria-label":p.x.name+(pr.complete ? ", выполнено" : pr.done ? ", сделано "+pr.done+" из "+pr.total : ""),
       onclick:function(){ S.focus=p.x.id; save(); render(); }},
     h("span",{class:"nm"}, p.x.name), pr.done ? repMarks(p) : null);
@@ -2442,7 +2453,7 @@ function exOpen(p){
   var x=p.x, pr=exProgress(p), wr=cur(p,"w");
   var sec=h("section",{class:"cur", "aria-label":"Текущее упражнение: "+x.name});
   sec.appendChild(h("div",{class:"cur-row"},
-    h("button",{class:"cur-title", type:"button", onclick:function(){ go("ex/"+x.id); }}, x.name, NB, icon("next","i-sm")),
+    h("button",{class:"cur-title", type:"button", "data-fk":"ex-"+x.id, onclick:function(){ go("ex/"+x.id); }}, x.name, NB, icon("next","i-sm")),
     h("span",{class:"cur-tg"}, x.reps)));
   var active=null;
   if(p.warm && !(wr && wr.done) && !pr.done) active="w";
@@ -2526,7 +2537,7 @@ function openDayPicker(){
           h("span",{class:"option-label"}, d.name),
           done[i] ? h("span",{class:"option-meta"}, "сделано") : null, i===S.day ? icon("tick","i-sm option-tick") : null);
       })));
-  });
+  }, "Выбор тренировки");
 }
 
 /* ---------- screens: summary ---------- */
@@ -2603,12 +2614,12 @@ function renderFood(root){
   list.forEach(function(meal, i){
     var kcal=Math.round(meal.total.kcal)+NB+"ккал";
     if(i!==open){
-      meals.appendChild(h("button",{class:"meal-row", type:"button", "aria-expanded":"false", onclick:function(){ mealOpen=i; render(); }},
+      meals.appendChild(h("button",{class:"meal-row", type:"button", "aria-expanded":"false", "data-fk":"meal-"+i, onclick:function(){ mealOpen=i; render(); }},
         h("span",{class:"meal-name"}, meal.name), h("span",{class:"meal-kcal"}, kcal)));
       return;
     }
     meals.appendChild(h("section",{class:"meal is-open", "aria-label":meal.name},
-      h("div",{class:"meal-head"}, h("h2",{class:"meal-name"}, meal.name), h("span",{class:"meal-kcal"}, kcal)),
+      h("div",{class:"meal-head"}, h("h2",{class:"meal-name", tabindex:"-1", "data-fk":"meal-"+i}, meal.name), h("span",{class:"meal-kcal"}, kcal)),
       h("ul",{class:"meal-items"}, meal.items.map(function(it){
         return h("li",null, h("span",null,it.ru), h("b",null, it.grams+NB+"г"));
       }))));
@@ -2988,7 +2999,7 @@ function askSend(text){
       chat.pop(); askErr=ASK_ERR[err]||ASK_ERR.fail;
       if(!askDraft) askDraft=q;
       if(!askImg) askImg=img;
-    } else chat.push({r:"m", t:a});
+    } else { chat.push({r:"m", t:a}); announce(a); }
     if(route()==="ask"){ render(); askScroll(); }
   });
 }
@@ -3010,7 +3021,7 @@ function renderAsk(root){
       // The button is gone now, so hand focus to the title for VoiceOver and keyboards.
       var t=document.querySelector("#app .head-title"); if(t){ t.setAttribute("tabindex","-1"); t.focus(); }
     }, {"aria-label":"Новый чат"})}));
-  var log=h("div",{class:"chat", "aria-live":"polite"});
+  var log=h("div",{class:"chat"});
   // Ideas hide once a photo is attached: a tapped idea would carry the photo with it.
   if(!chat.length && !askBusy && !askImg){
     var ideas=ex ? ["Как делать правильно?", "Чем заменить?"] : ["Сколько отдыхать между подходами?", "Что съесть перед тренировкой?"];
@@ -3099,9 +3110,11 @@ function numField(id, label, unit, mode, d, err){
     var all=[].slice.call(document.querySelectorAll(".num-input")), i=all.indexOf(inp);
     if(i>=0 && i<all.length-1) all[i+1].focus(); else { inp.blur(); wizNext(); }
   };
-  return h("label",{class:"num-field"+(err?" is-error":""), for:"f-"+id},
-    h("span",{class:"field-label"}, label),
-    h("span",{class:"num-wrap"}, inp, h("span",{class:"num-unit"}, unit)),
+  // The error sits outside the label, so it is read once, as the description.
+  return h("div",{class:"num-field"+(err?" is-error":"")},
+    h("label",{class:"num-label", for:"f-"+id},
+      h("span",{class:"field-label"}, label),
+      h("span",{class:"num-wrap"}, inp, h("span",{class:"num-unit"}, unit))),
     err ? h("span",{class:"field-error", id:"e-"+id, role:"alert"}, err) : null);
 }
 
@@ -3271,7 +3284,7 @@ function renderWizard(root){
   var pos=S.edit ? null : (S.wq+1)/FLOW.length;
   root.appendChild(h("header",{class:"wiz-head"},
     btn("icon-btn", icon(S.edit || (S.wq===0 && S.rerun) ? "close" : "back"), wizBack, {"aria-label":S.edit || (S.wq===0 && S.rerun) ? "Отмена" : "Назад"}),
-    pos!=null ? h("div",{class:"progress", role:"progressbar", "aria-valuemin":"0", "aria-valuemax":String(FLOW.length), "aria-valuenow":String(S.wq+1)},
+    pos!=null ? h("div",{class:"progress", role:"progressbar", "aria-label":"Шаг "+(S.wq+1)+" из "+FLOW.length, "aria-valuemin":"0", "aria-valuemax":String(FLOW.length), "aria-valuenow":String(S.wq+1)},
       h("i",{style:"transform:scaleX("+pos.toFixed(3)+")"})) : h("div",{class:"progress-spacer"})));
   root.appendChild(h("h1",{class:"wiz-title"}, st.title));
   if(st.lead) root.appendChild(h("p",{class:"wiz-lead"}, st.lead));
@@ -3285,9 +3298,10 @@ function renderWizard(root){
 }
 function renderWizardBody(){
   if(!wizBodyEl) return;
-  var st=STEPS[wizStepId()];
+  var st=STEPS[wizStepId()], fk=wizBodyEl.contains(document.activeElement) ? focusKey(document.activeElement) : null;
   wizBodyEl.innerHTML="";
   put(wizBodyEl, st.body(S.draft));
+  if(fk) refocus(wizBodyEl, fk);
 }
 
 /* ---------- screens: welcome and red flag ---------- */
@@ -3347,9 +3361,14 @@ function render(){
   if(reveal) revealActive(reveal);
   reveal=null;
   renderTopbar();
-  if(fk && !sheetFn) refocus(document.body, fk);
+  if(fk && !sheetFn && !refocus(document.body, fk)) focusNext();
   lastView=key;
   ping();
+}
+// The control that had focus is gone (a set was logged, rest ended): go to what comes next.
+function focusNext(){
+  var el=S.rest ? document.querySelector("#dock .skip") : document.querySelector("#app .act .go");
+  if(el){ try{ el.focus({preventScroll:true}); }catch(e){ el.focus(); } }
 }
 // iOS-style inline title once the large title has scrolled away.
 function updateTopbar(){
@@ -3393,6 +3412,8 @@ window.addEventListener("resize", setDockSpace);
 try{ history.scrollRestoration="manual"; }catch(e){}
 applyTheme();
 if(!storageOk) storageWarning();
+liveEl=h("div",{class:"sr-only", "aria-live":"polite", "data-live":""});
+document.body.appendChild(liveEl);
 window.FORGE_UI={render:render, state:function(){ return S; }};
 render();
 if(S.rest || S.session) tick();
