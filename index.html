@@ -551,6 +551,9 @@ button.row:active{background:var(--band)}
 .att-x .ic{width:14px;height:14px}
 .chip-icon .i-chip svg{stroke-width:2}
 .att-x::before{content:"";position:absolute;inset:-10px}
+.sh-hint,.act-hint{color:var(--ink-3);font-size:13px;line-height:18px}
+.sh-hint{margin:8px 0 0}
+.act-hint{margin:8px 0 0}
 </style>
 </head>
 <body>
@@ -1689,6 +1692,16 @@ function eqFor(x){
   return list[0] || "";
 }
 function loadKind(x){ var e=eqFor(x); return e==="bb" ? "bar" : e==="db" ? "db" : (e==="cable" || e==="machine") ? "stack" : e==="bw" ? "bw" : ""; }
+// What the weight field means when it is not obvious. The keypad gets the longer version.
+function weightNote(x, long){
+  var k=loadKind(x);
+  if(k==="db") return "Вес одной гантели";
+  if(k==="bw") return long ? "Только дополнительный вес, без него оставь пустым" : "Дополнительный вес";
+  return null;
+}
+// Pull-ups and dips lift the body too, so their estimated max counts body weight plus the extra load.
+function bodyLift(x){ return !!x && loadKind(x)==="bw" && x.type==="comp"; }
+function setMax(x, r){ return e1rm((r.w||0)+(bodyLift(x) && S.profile ? S.profile.weight||0 : 0), r.r); }
 function loadArt(x, w, o){
   o=o||{};
   var kind=loadKind(x), ghost=w==null, cls=(o.cls||"")+(ghost?" is-ghost":"");
@@ -2032,13 +2045,13 @@ function finishSession(){
     for(var si=0; si<p.n; si++){
       var r=S.log[lkey(s.week,s.day,p.x.id,si)];
       if(!isMaxSet(r) || !inSession(r)) continue;
-      if(e1rm(r.w,r.r)>best){ best=e1rm(r.w,r.r); bestSet={w:r.w, r:r.r}; }
+      if(setMax(p.x, r)>best){ best=setMax(p.x, r); bestSet={w:r.w, r:r.r}; }
       if(isBarbell(p.x) && r.w>=BAR_KG && (!heaviest || r.w>heaviest.w)) heaviest={w:r.w, r:r.r, name:p.x.name};
     }
     if(!best) return;
     var before=0;
     allDone(p.x.id).forEach(function(r2){
-      if(isMaxSet(r2) && (r2.at||0)<s.start) before=Math.max(before, e1rm(r2.w, r2.r));
+      if(isMaxSet(r2) && (r2.at||0)<s.start) before=Math.max(before, setMax(p.x, r2));
     });
     if(before>0 && Math.round(best)>Math.round(before)) records.push({id:p.x.id, name:p.x.name, from:Math.round(before), to:Math.round(best), w:bestSet.w, r:bestSet.r});
   });
@@ -2221,8 +2234,9 @@ function typeLabel(t){ return TYPE_RU[t] || "Обычный"; }
 function slot(state, f, unit){
   var on=state.field===f, v=state[f], ghost=(state.ghost && state.ghost[f]) || !v;
   var shown=v || "0";
+  var wl=f==="w" && state.p && weightNote(state.p.x) ? weightNote(state.p.x) : "Вес";
   return h("button",{class:"pocket"+(on?" is-focus":""), type:"button", "aria-pressed":String(on), "data-fk":"slot-"+f,
-      "aria-label":(f==="w"?"Вес":"Повторы")+" "+shown+(ghost?", предложено":""),
+      "aria-label":(f==="w"?wl:"Повторы")+" "+shown+(ghost?", предложено":""),
       onclick:function(){ state.field=f; state.fresh[f]=true; renderSheet(); }},
     h("span",{class:"disp"+(ghost?" is-ghost":"")+(shown.replace(",","").length>=4?" is-long":"")}, shown),
     on ? h("span",{class:"caret","aria-hidden":"true"}) : null,
@@ -2263,6 +2277,7 @@ function padView(){
         onclick:function(){ pad.t=t; pad.typeOpen=false; pad.dirty=true; buzz(6); renderSheet(); }}, typeLabel(t));
     })) : null,
     h("div",{class:"sh-value"}, slot(pad,"w","кг"), h("span",{class:"times","aria-hidden":"true"},"×"), slot(pad,"r",null)),
+    weightNote(p.x, true) ? h("p",{class:"sh-hint","aria-hidden":"true"}, weightNote(p.x, true)) : null,
     pad.err ? h("p",{class:"field-error sheet-err", role:"alert"}, pad.err) : null,
     loadArt(p.x, w, {h:60}) ? h("div",{class:"sh-bar", html:loadArt(p.x, w, {h:60})}) : null,
     keysGrid(pad, pad.field==="w" ? "Повторы" : pad.done ? "Сохранить" : "Записать", padNext));
@@ -2475,7 +2490,7 @@ function activeSet(p, si){
   function pocket(v, field, ghost, unit){
     var shown=v!=null ? (field==="w" ? (loadKind(p.x)==="bw" && v>0 ? "+" : "")+fmt(v) : String(v)) : (field==="w" && isBarbell(p.x) ? "20" : "—");
     return h("button",{class:"pocket", type:"button", "data-fk":"act-"+p.x.id+"-"+field, onclick:function(){ openPad(p, si, field); },
-        "aria-label":(field==="w"?"Вес ":"Повторы ")+shown+(ghost?", предложено":"")+". Изменить"},
+        "aria-label":(field==="w" ? (weightNote(p.x)||"Вес")+" " : "Повторы ")+shown+(ghost?", предложено":"")+". Изменить"},
       h("span",{class:"fig"+(ghost||v==null?" is-ghost":"")+(shown.replace(",","").length>=4?" is-long":"")}, shown),
       unit ? h("span",{class:"unit"}, unit) : null);
   }
@@ -2492,7 +2507,8 @@ function activeSet(p, si){
       h("span",{class:"times","aria-hidden":"true"},"×"),
       pocket(r, "r", gr, null),
       h("button",{class:"go", type:"button", "data-fk":"go-"+p.x.id, onclick:function(){ toggleSet(p, si); },
-        "aria-label":"Записать "+(si==="w"?"разминку":"подход "+(si+1))+(r!=null ? ": "+setXR(w,r,p.x) : "")}, icon("tick","i-go"))));
+        "aria-label":"Записать "+(si==="w"?"разминку":"подход "+(si+1))+(r!=null ? ": "+setXR(w,r,p.x) : "")}, icon("tick","i-go"))),
+    weightNote(p.x) ? h("p",{class:"act-hint","aria-hidden":"true"}, weightNote(p.x)) : null);
 }
 
 function openDayPicker(){
@@ -2639,7 +2655,7 @@ function bestByExercise(){
   var out={};
   function take(id, r){
     if(!isMaxSet(r)) return;
-    var e=e1rm(r.w, r.r); if(!e) return;
+    var f=findExercise(id), e=f ? setMax(f.x, r) : e1rm(r.w, r.r); if(!e) return;
     var o=out[id]||(out[id]={id:id, best:0, first:null, firstAt:Infinity, at:0, sets:[]});
     if(e>o.best){ o.best=e; o.at=r.at||0; o.w=r.w; o.r=r.r; }
     o.firstAt=Math.min(o.firstAt, r.at||0); o.sets.push({e:e, at:r.at||0});
@@ -2666,7 +2682,7 @@ function renderProgress(root){
     root.appendChild(h("button",{class:"hero", type:"button", onclick:function(){ go("ex/"+top.id); }},
       h("span",{class:"hero-name"}, ex.name),
       h("span",{class:"hero-num"}, String(Math.round(top.best)), h("span",{class:"hero-unit"}, NB+"кг")),
-      h("span",{class:"hero-sub"}, "Расчётный максимум"+(gain>0 ? " · +"+gain+NB+"кг за "+weeksAgo(top.firstAt||top.at) : "")),
+      h("span",{class:"hero-sub"}, "Расчётный максимум"+(bodyLift(ex) ? " с весом тела" : "")+(gain>0 ? " · +"+gain+NB+"кг за "+weeksAgo(top.firstAt||top.at) : "")),
       loadArt(ex, top.w, {cls:"is-ink"}) ? h("span",{class:"hero-art", html:loadArt(ex, top.w, {cls:"is-ink"})}) : null,
       top.r ? h("span",{class:"hero-cap"}, "Лучший подход: "+setXR(top.w, top.r)) : null));
   }
@@ -2677,7 +2693,7 @@ function renderProgress(root){
       h("div",{class:"rows"}, rest.map(function(o){
         var x=findExercise(o.id).x, gain=Math.round(o.best)-Math.round(o.first||o.best);
         return h("button",{class:"row", type:"button", onclick:function(){ go("ex/"+o.id); }},
-          h("span",{class:"row-label"}, x.name),
+          h("span",{class:"row-label"}, x.name, bodyLift(x) ? h("small",null,"с весом тела") : null),
           gain>0 ? h("span",{class:"row-delta"}, "+"+gain+NB+"кг") : null,
           h("span",{class:"row-value"}, Math.round(o.best)+NB+"кг"),
           icon("next","i-sm"));
@@ -2693,13 +2709,13 @@ function renderProgress(root){
 }
 
 function seriesFor(id){
-  var weeks=[];
+  var weeks=[], f=findExercise(id);
   for(var w=1; w<=8; w++) weeks.push(0);
   for(var k in S.log){
     var q=k.split("|"), r=S.log[k];
     if(q[2]!==id || !isMaxSet(r)) continue;
     var wi=(+q[0])-1; if(wi<0 || wi>7) continue;
-    weeks[wi]=Math.max(weeks[wi], e1rm(r.w, r.r));
+    weeks[wi]=Math.max(weeks[wi], f ? setMax(f.x, r) : e1rm(r.w, r.r));
   }
   return weeks.map(function(v){ return v ? Math.round(v) : null; });
 }
