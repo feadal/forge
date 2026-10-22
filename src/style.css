@@ -129,8 +129,6 @@ noscript{display:block;padding:24px var(--m)}
 .head{padding:4px var(--m) 0}
 .head-nav{margin:0 0 0 -12px}
 .head-row{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:44px}
-.head-row .i-chip{width:16px;height:16px;margin:0 6px 0 -4px}
-.i-chip svg{stroke-width:2.6}
 .icon-btn{margin-right:-10px}
 .head-title{min-width:0}
 .title-btn{display:inline-flex;align-items:center;gap:4px;min-height:44px;font:inherit;letter-spacing:inherit;text-align:left}
@@ -162,7 +160,6 @@ noscript{display:block;padding:24px var(--m)}
 .lab{color:var(--ink-2);font-size:15px;line-height:20px}
 .lab-tag{color:var(--ink-3)}
 .val{justify-self:start;min-height:44px;min-width:44px;display:inline-flex;align-items:center;gap:8px;text-align:left;font-weight:600}
-.val small{font-size:13px;line-height:18px;font-weight:400;color:var(--ink-3)}
 .set.todo .val{font-weight:400;color:var(--ink-3)}
 .set.next .lab{color:var(--ink);font-weight:600}
 .puck{width:44px;height:44px;display:grid;place-items:center;justify-self:end;margin-right:-10px;color:var(--ink)}
@@ -281,7 +278,7 @@ noscript{display:block;padding:24px var(--m)}
 .type-btn .ic{color:var(--ink-3)}
 .type-btn.is-open .ic{transform:rotate(180deg)}
 .seg-types{margin-top:8px}
-.sheet .option,.sheet .seg,.sheet .step{background:var(--key)}
+.sheet .option,.sheet .seg{background:var(--key)}
 .sheet .option.is-on{background:var(--sel)}
 .sheet .prev{margin:0}
 .sheet .prev::before{background:var(--key)}
@@ -463,7 +460,6 @@ button.row:active{background:var(--band)}
 .sum-bar{margin:20px calc(-1 * var(--m)) 0}
 .sum-bar figcaption{padding:8px var(--m) 0;color:var(--ink-3);font-size:13px;line-height:18px}
 .sum-more{margin:8px 0 0}
-.sum-bar b{color:var(--ink);font-weight:600}
 .sum-next{margin-top:16px;color:var(--ink-2)}
 .sum-next b{color:var(--ink);font-weight:600}
 

@@ -149,8 +149,6 @@ noscript{display:block;padding:24px var(--m)}
 .head{padding:4px var(--m) 0}
 .head-nav{margin:0 0 0 -12px}
 .head-row{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:44px}
-.head-row .i-chip{width:16px;height:16px;margin:0 6px 0 -4px}
-.i-chip svg{stroke-width:2.6}
 .icon-btn{margin-right:-10px}
 .head-title{min-width:0}
 .title-btn{display:inline-flex;align-items:center;gap:4px;min-height:44px;font:inherit;letter-spacing:inherit;text-align:left}
@@ -182,7 +180,6 @@ noscript{display:block;padding:24px var(--m)}
 .lab{color:var(--ink-2);font-size:15px;line-height:20px}
 .lab-tag{color:var(--ink-3)}
 .val{justify-self:start;min-height:44px;min-width:44px;display:inline-flex;align-items:center;gap:8px;text-align:left;font-weight:600}
-.val small{font-size:13px;line-height:18px;font-weight:400;color:var(--ink-3)}
 .set.todo .val{font-weight:400;color:var(--ink-3)}
 .set.next .lab{color:var(--ink);font-weight:600}
 .puck{width:44px;height:44px;display:grid;place-items:center;justify-self:end;margin-right:-10px;color:var(--ink)}
@@ -301,7 +298,7 @@ noscript{display:block;padding:24px var(--m)}
 .type-btn .ic{color:var(--ink-3)}
 .type-btn.is-open .ic{transform:rotate(180deg)}
 .seg-types{margin-top:8px}
-.sheet .option,.sheet .seg,.sheet .step{background:var(--key)}
+.sheet .option,.sheet .seg{background:var(--key)}
 .sheet .option.is-on{background:var(--sel)}
 .sheet .prev{margin:0}
 .sheet .prev::before{background:var(--key)}
@@ -483,7 +480,6 @@ button.row:active{background:var(--band)}
 .sum-bar{margin:20px calc(-1 * var(--m)) 0}
 .sum-bar figcaption{padding:8px var(--m) 0;color:var(--ink-3);font-size:13px;line-height:18px}
 .sum-more{margin:8px 0 0}
-.sum-bar b{color:var(--ink);font-weight:600}
 .sum-next{margin-top:16px;color:var(--ink-2)}
 .sum-next b{color:var(--ink);font-weight:600}
 
@@ -1212,8 +1208,8 @@ function energy(input){
   const tdee = b.value*act.mul;
   let target, rate, label;
   switch(input.goal){
-    case "cut":    target = tdee*0.80; rate="−0,5…−0,7 кг в неделю"; label="Сушка"; break;
-    case "bulk":   target = tdee*1.10; rate="+0,2…+0,35 кг в неделю"; label="Набор массы"; break;
+    case "cut":    target = tdee*0.80; rate="−0,5…−0,7 кг в неделю"; label="Сушка"; break;
+    case "bulk":   target = tdee*1.10; rate="+0,2…+0,35 кг в неделю"; label="Набор массы"; break;
     case "recomp": target = tdee*1.00; rate="вес держится ровно"; label="Рекомпозиция"; break;
     default:       target = tdee;      rate="вес держится ровно"; label="Поддержание";
   }
@@ -1464,13 +1460,13 @@ function generateNutrition(input){
   const {foods, notes} = allowedFoods(input.restrictions);
   const goalNotes = [];
   if(input.goal==="cut"){
-    goalNotes.push("Белок "+String(m.pPerKg).replace(".",",")+" г на кг веса: в дефиците это главная защита мышц.");
-    goalNotes.push("Раз в 7–10 дней делай рефид: плюс 25–30% калорий за счёт углеводов.");
-    goalNotes.push("Если вес не падает 2–3 недели, убери ещё 150–200 ккал, не больше.");
+    goalNotes.push("Белок "+String(m.pPerKg).replace(".",",")+" г на кг веса: в дефиците это главная защита мышц.");
+    goalNotes.push("Раз в 7–10 дней ешь на 25–30 % больше калорий, в основном за счёт углеводов.");
+    goalNotes.push("Если вес не падает 2–3 недели, убери ещё 150–200 ккал, не больше.");
     goalNotes.push("Овощи и объёмная еда дают сытость почти без калорий.");
   }
   if(input.goal==="bulk"){
-    goalNotes.push("Если вес стоит 2–3 недели, добавь 150–200 ккал углеводами. Если прибавляешь больше 0,4 кг в неделю, убавь: лишнее уходит в жир.");
+    goalNotes.push("Если вес стоит 2–3 недели, добавь 150–200 ккал углеводами. Если прибавляешь больше 0,4 кг в неделю, убавь: лишнее уходит в жир.");
   }
   const day = buildMeals(input, m, foods, input.dayIndex||0);
   const sum = day.meals ? day.meals.reduce((a,x)=>({kcal:a.kcal+x.total.kcal,p:a.p+x.total.p,f:a.f+x.total.f,c:a.c+x.total.c,fib:a.fib+x.total.fib}),{kcal:0,p:0,f:0,c:0,fib:0}) : null;
@@ -1478,11 +1474,11 @@ function generateNutrition(input){
   const fitNotes = [];
   if(actual){
     if(actual.p < m.protein*0.9){
-      fitNotes.push("Не хватает "+(m.protein-actual.p)+" г белка. "+
+      fitNotes.push("Не хватает "+(m.protein-actual.p)+" г белка. "+
         (input.meals<=4 ? "Добавь приём пищи или порцию протеина." : "Добавь порцию протеина."));
     }
     if(actual.f > m.fat*1.2){
-      fitNotes.push("Жиров на "+(actual.f-m.fat)+" г больше цели. Убери орехи или масло из одного приёма.");
+      fitNotes.push("Жиров на "+(actual.f-m.fat)+" г больше цели. Убери орехи или масло из одного приёма.");
     }
     if(actual.kcal > e.target*1.08){
       fitNotes.push("Калорий на "+(actual.kcal-e.target)+" больше цели. Уменьши гарнир в самом большом приёме.");
@@ -1507,10 +1503,18 @@ function fresh(){
   return {v:2, step:"welcome", draft:{}, wq:0, edit:null, rerun:false,
     profile:null, program:null, nutrition:null, nutI:0,
     log:{}, past:[], cycle:1, sessions:[], week:1, day:0, focus:null, session:null, rest:null, summary:null, undo:null,
-    restCfg:{comp:150, iso:90, warm:60}, restEx:{}, tab:"train", theme:"auto", ask:"on", askOk:false};
+    restCfg:{comp:150, iso:90, warm:60}, restEx:{}, tab:"train", theme:"auto", ask:"on", askOk:false,
+    uid:null, seen:null, rerunFrom:null};
 }
 var mem=null, storageOk=true;
-function load(){ try{ var r=localStorage.getItem(KEY); if(r) return JSON.parse(r); }catch(e){ storageOk=false; } return mem; }
+function load(){
+  var r;
+  try{ r=localStorage.getItem(KEY); }catch(e){ storageOk=false; return mem; }
+  if(!r) return mem;
+  try{ return JSON.parse(r); }
+  // Damaged data is not a storage problem: keep a copy aside and start clean, saving as usual.
+  catch(e){ try{ localStorage.setItem(KEY+"_broken", r); }catch(e2){} return null; }
+}
 function save(){
   try{ localStorage.setItem(KEY, JSON.stringify(S)); }
   catch(e){ mem=S; if(storageOk){ storageOk=false; storageWarning(); } }
@@ -2135,7 +2139,6 @@ function closeSheet(silent){
   sheetFn=null; pad=null; finder=null;
   var root=$("sheet");
   if(root){ root.className=""; root.innerHTML=""; }
-  document.documentElement.classList.remove("has-sheet");
   setInert(false);
   pendingFocus=opener; opener=null;
   if(!silent) render();
@@ -2159,7 +2162,6 @@ function renderSheet(){
     h("div",{class:"sheet-body"}, sheetFn()));
   root.appendChild(scrim); root.appendChild(panel);
   root.className="is-open";
-  document.documentElement.classList.add("has-sheet");
   setInert(true);
   try{ panel.focus({preventScroll:true}); }catch(e){ panel.focus(); }
   dragToDismiss(panel);
@@ -2777,8 +2779,7 @@ function renderExercise(root, id){
   if(svg){
     root.appendChild(h("section",{class:"group"},
       h("h2",{class:"section-title"}, "Расчётный максимум по неделям"),
-      h("div",{class:"chart-wrap", html:svg}),
-      ));
+      h("div",{class:"chart-wrap", html:svg})));
   }
   var hist=[];
   for(var w=8; w>=1 && hist.length<4; w--){

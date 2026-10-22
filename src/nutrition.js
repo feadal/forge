@@ -123,8 +123,8 @@ function energy(input){
   const tdee = b.value*act.mul;
   let target, rate, label;
   switch(input.goal){
-    case "cut":    target = tdee*0.80; rate="−0,5…−0,7 кг в неделю"; label="Сушка"; break;
-    case "bulk":   target = tdee*1.10; rate="+0,2…+0,35 кг в неделю"; label="Набор массы"; break;
+    case "cut":    target = tdee*0.80; rate="−0,5…−0,7 кг в неделю"; label="Сушка"; break;
+    case "bulk":   target = tdee*1.10; rate="+0,2…+0,35 кг в неделю"; label="Набор массы"; break;
     case "recomp": target = tdee*1.00; rate="вес держится ровно"; label="Рекомпозиция"; break;
     default:       target = tdee;      rate="вес держится ровно"; label="Поддержание";
   }
@@ -375,13 +375,13 @@ function generateNutrition(input){
   const {foods, notes} = allowedFoods(input.restrictions);
   const goalNotes = [];
   if(input.goal==="cut"){
-    goalNotes.push("Белок "+String(m.pPerKg).replace(".",",")+" г на кг веса: в дефиците это главная защита мышц.");
-    goalNotes.push("Раз в 7–10 дней делай рефид: плюс 25–30% калорий за счёт углеводов.");
-    goalNotes.push("Если вес не падает 2–3 недели, убери ещё 150–200 ккал, не больше.");
+    goalNotes.push("Белок "+String(m.pPerKg).replace(".",",")+" г на кг веса: в дефиците это главная защита мышц.");
+    goalNotes.push("Раз в 7–10 дней ешь на 25–30 % больше калорий, в основном за счёт углеводов.");
+    goalNotes.push("Если вес не падает 2–3 недели, убери ещё 150–200 ккал, не больше.");
     goalNotes.push("Овощи и объёмная еда дают сытость почти без калорий.");
   }
   if(input.goal==="bulk"){
-    goalNotes.push("Если вес стоит 2–3 недели, добавь 150–200 ккал углеводами. Если прибавляешь больше 0,4 кг в неделю, убавь: лишнее уходит в жир.");
+    goalNotes.push("Если вес стоит 2–3 недели, добавь 150–200 ккал углеводами. Если прибавляешь больше 0,4 кг в неделю, убавь: лишнее уходит в жир.");
   }
   const day = buildMeals(input, m, foods, input.dayIndex||0);
   const sum = day.meals ? day.meals.reduce((a,x)=>({kcal:a.kcal+x.total.kcal,p:a.p+x.total.p,f:a.f+x.total.f,c:a.c+x.total.c,fib:a.fib+x.total.fib}),{kcal:0,p:0,f:0,c:0,fib:0}) : null;
@@ -389,11 +389,11 @@ function generateNutrition(input){
   const fitNotes = [];
   if(actual){
     if(actual.p < m.protein*0.9){
-      fitNotes.push("Не хватает "+(m.protein-actual.p)+" г белка. "+
+      fitNotes.push("Не хватает "+(m.protein-actual.p)+" г белка. "+
         (input.meals<=4 ? "Добавь приём пищи или порцию протеина." : "Добавь порцию протеина."));
     }
     if(actual.f > m.fat*1.2){
-      fitNotes.push("Жиров на "+(actual.f-m.fat)+" г больше цели. Убери орехи или масло из одного приёма.");
+      fitNotes.push("Жиров на "+(actual.f-m.fat)+" г больше цели. Убери орехи или масло из одного приёма.");
     }
     if(actual.kcal > e.target*1.08){
       fitNotes.push("Калорий на "+(actual.kcal-e.target)+" больше цели. Уменьши гарнир в самом большом приёме.");

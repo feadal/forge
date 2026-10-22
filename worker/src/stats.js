@@ -19,7 +19,7 @@ h1{margin:0;font-size:28px;line-height:34px;font-weight:800;letter-spacing:-.025
 .stat span{color:var(--ink-2);font-size:15px;line-height:20px}
 .stat.is-main b{color:var(--accent)}
 .chart{margin:32px -20px 0;padding:20px 20px 16px;background:var(--band)}
-.chart h2,.rows h2{margin:0;font-size:15px;line-height:20px;font-weight:600;color:var(--ink-2)}
+.chart h2{margin:0;font-size:15px;line-height:20px;font-weight:600;color:var(--ink-2)}
 .bars{list-style:none;margin:16px 0 0;padding:0;height:120px;display:grid;grid-template-columns:repeat(30,1fr);gap:3px;align-items:end}
 .bar{height:100%;display:flex;align-items:flex-end}
 .bar span{display:block;width:100%;min-height:2px;border-radius:3px 3px 1px 1px;background:var(--bar)}

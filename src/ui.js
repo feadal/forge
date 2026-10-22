@@ -11,10 +11,18 @@ function fresh(){
   return {v:2, step:"welcome", draft:{}, wq:0, edit:null, rerun:false,
     profile:null, program:null, nutrition:null, nutI:0,
     log:{}, past:[], cycle:1, sessions:[], week:1, day:0, focus:null, session:null, rest:null, summary:null, undo:null,
-    restCfg:{comp:150, iso:90, warm:60}, restEx:{}, tab:"train", theme:"auto", ask:"on", askOk:false};
+    restCfg:{comp:150, iso:90, warm:60}, restEx:{}, tab:"train", theme:"auto", ask:"on", askOk:false,
+    uid:null, seen:null, rerunFrom:null};
 }
 var mem=null, storageOk=true;
-function load(){ try{ var r=localStorage.getItem(KEY); if(r) return JSON.parse(r); }catch(e){ storageOk=false; } return mem; }
+function load(){
+  var r;
+  try{ r=localStorage.getItem(KEY); }catch(e){ storageOk=false; return mem; }
+  if(!r) return mem;
+  try{ return JSON.parse(r); }
+  // Damaged data is not a storage problem: keep a copy aside and start clean, saving as usual.
+  catch(e){ try{ localStorage.setItem(KEY+"_broken", r); }catch(e2){} return null; }
+}
 function save(){
   try{ localStorage.setItem(KEY, JSON.stringify(S)); }
   catch(e){ mem=S; if(storageOk){ storageOk=false; storageWarning(); } }
@@ -639,7 +647,6 @@ function closeSheet(silent){
   sheetFn=null; pad=null; finder=null;
   var root=$("sheet");
   if(root){ root.className=""; root.innerHTML=""; }
-  document.documentElement.classList.remove("has-sheet");
   setInert(false);
   pendingFocus=opener; opener=null;
   if(!silent) render();
@@ -663,7 +670,6 @@ function renderSheet(){
     h("div",{class:"sheet-body"}, sheetFn()));
   root.appendChild(scrim); root.appendChild(panel);
   root.className="is-open";
-  document.documentElement.classList.add("has-sheet");
   setInert(true);
   try{ panel.focus({preventScroll:true}); }catch(e){ panel.focus(); }
   dragToDismiss(panel);
@@ -1281,8 +1287,7 @@ function renderExercise(root, id){
   if(svg){
     root.appendChild(h("section",{class:"group"},
       h("h2",{class:"section-title"}, "Расчётный максимум по неделям"),
-      h("div",{class:"chart-wrap", html:svg}),
-      ));
+      h("div",{class:"chart-wrap", html:svg})));
   }
   var hist=[];
   for(var w=8; w>=1 && hist.length<4; w--){
