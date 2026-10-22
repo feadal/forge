@@ -45,7 +45,10 @@ The first launch needs an internet connection. After that the app works offline,
 
 The app has no accounts. Your profile, program and workout history stay on your phone, in `localStorage`.
 
-The Ask screen is the one exception. Your question, and the photo if you attach one, go through a small proxy (`worker/`) to Google Gemini. The only other things sent with it are your goal and the exercise you asked about. The app asks before the first question, and you can turn the assistant off in Settings.
+Two things leave the phone, both through a small proxy (`worker/`):
+
+- On the Ask screen, your question and the photo if you attach one go to Google Gemini. The only other things sent with it are your goal and the exercise you asked about. The app asks before the first question, and you can turn the assistant off in Settings.
+- Once a day, when online, the app sends a random install number so the owner can count how many people use it. Nothing else goes with it: no weight, workouts, questions or device details. The number is made on the phone and is replaced when you delete all data.
 
 ## Evidence behind the rules
 
@@ -85,7 +88,17 @@ npx wrangler secret put GEMINI_API_KEY
 npx wrangler deploy
 ```
 
-Then set `ASK_URL` in `src/ui.js` to the Worker address and rebuild. Allowed origins, the model and the rate limits are in `worker/wrangler.toml`. With `ASK_URL` empty the Ask screen is hidden.
+Then set `ASK_URL` in `src/ui.js` to the Worker address and rebuild. Allowed origins, the model and the rate limits are in `worker/wrangler.toml`. With `ASK_URL` empty the Ask screen and the install count are off.
+
+The install count needs a D1 database and a password for the stats page:
+
+```bash
+npx wrangler d1 create forge-stats
+npx wrangler d1 execute forge-stats --remote --file schema.sql
+npx wrangler secret put STATS_KEY
+```
+
+Put the database id into `worker/wrangler.toml` and deploy again. The counts are at `/stats` on the Worker address, behind that password.
 
 ## Disclaimer
 

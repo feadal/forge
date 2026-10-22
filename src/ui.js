@@ -1356,8 +1356,31 @@ function renderSettings(root){
         S=fresh(); mem=null; dropAwake(); applyTheme(); save(); go(""); render();
       }});
     })));
-  root.appendChild(h("p",{class:"fine about"}, "Данные хранятся только на этом телефоне."));
+  root.appendChild(h("p",{class:"fine about"}, "Данные хранятся только на этом телефоне."+(PING_URL ? " Чтобы считать пользователей, раз в день уходит анонимный номер установки." : "")));
 }
+
+/* ---------- install count: once a day a random install number goes to the proxy, nothing else ---------- */
+
+var PING_URL=ASK_URL ? ASK_URL.replace(/\/?$/, "/")+"ping" : "", pinging=false;
+// The proxy counts days in Moscow time, so the app does too.
+function mskDay(){ return new Date(Date.now()+3*3600e3).toISOString().slice(0,10); }
+function newId(){
+  if(window.crypto && crypto.randomUUID) return crypto.randomUUID();
+  var a=new Uint8Array(16); window.crypto.getRandomValues(a);
+  return Array.prototype.map.call(a, function(b){ return (b+256).toString(16).slice(1); }).join("");
+}
+// Pings again the day the program is built, so «собрали программу» counts it.
+function ping(){
+  if(!PING_URL || !storageOk || pinging || navigator.onLine===false) return;
+  var mark=mskDay()+(S.program ? "+" : "");
+  if(S.seen===mark) return;
+  if(!S.uid){ S.uid=newId(); save(); }
+  pinging=true;
+  fetch(PING_URL, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({id:S.uid, ready:!!S.program}), keepalive:true})
+    .then(function(r){ pinging=false; if(r.ok){ S.seen=mark; save(); } }, function(){ pinging=false; });
+}
+document.addEventListener("visibilitychange", function(){ if(document.visibilityState==="visible") ping(); });
+window.addEventListener("online", ping);
 
 /* ---------- ask: questions and food photos go to the proxy in worker/, nothing else leaves the phone ---------- */
 
@@ -1783,6 +1806,7 @@ function render(){
   renderTopbar();
   if(fk && !sheetFn) refocus(document.body, fk);
   lastView=key;
+  ping();
 }
 // iOS-style inline title once the large title has scrolled away.
 function updateTopbar(){

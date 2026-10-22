@@ -25,3 +25,26 @@ namespace_id = "1002"
   [ratelimits.simple]
   limit = 9
   period = 60
+
+# Install pings (POST /ping): 10 a minute per address is plenty for a once-a-day ping.
+[[ratelimits]]
+name = "PING"
+namespace_id = "1003"
+  [ratelimits.simple]
+  limit = 10
+  period = 60
+
+# Install counts for /stats. Create once with: npx wrangler d1 create forge-stats
+# then: npx wrangler d1 execute forge-stats --remote --file schema.sql
+[[d1_databases]]
+binding = "DB"
+database_name = "forge-stats"
+database_id = "a5b12595-b83f-483f-b4d4-64bc1f534d47"
+
+# Sign-in attempts on /stats: 5 a minute per address.
+[[ratelimits]]
+name = "LOGIN"
+namespace_id = "1004"
+  [ratelimits.simple]
+  limit = 5
+  period = 60
