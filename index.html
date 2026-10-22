@@ -534,10 +534,10 @@ button.row:active{background:var(--band)}
 .msg-err{color:var(--danger);font-size:15px;line-height:20px}
 /* Above the whole dock, so the dock fade does not wash over it. */
 .ask-bar{position:sticky;bottom:calc(var(--dock) + 10px);z-index:21;margin:8px 12px 0;padding:6px;border-radius:var(--r-slab);
-  background:var(--pocket);box-shadow:0 8px 28px rgba(var(--shade),.12),0 1px 3px rgba(var(--shade),.06);display:grid;gap:6px}
+  background:var(--pocket);box-shadow:0 8px 28px rgba(var(--shade),.12),0 1px 3px rgba(var(--shade),.06);display:grid;grid-template-columns:minmax(0,1fr);gap:6px}
 .ask-row{display:flex;align-items:flex-end;gap:4px}
 .ask-row .icon-btn{margin:0}
-.ask-input{flex:1;min-width:0;min-height:44px;max-height:132px;resize:none;border:1px solid transparent;background:none;
+.ask-input{flex:1;width:0;min-width:0;min-height:44px;max-height:132px;resize:none;border:1px solid transparent;background:none;
   padding:11px 4px;font:inherit;color:inherit;letter-spacing:inherit;line-height:22px;caret-color:var(--accent)}
 .ask-input:focus{outline:none}
 .ask-input::placeholder{color:var(--ghost)}
