@@ -5,9 +5,12 @@ main = "src/index.js"
 compatibility_date = "2025-09-01"
 
 [vars]
-# Tried in order: when one is overloaded or slow, the next answers.
-# 3.8 Flash is last: on 22 Oct 2026 it timed out on the free tier while 3.6 answered in 4 s.
-MODELS = "gemini-3.6-flash,gemini-3.5-flash-lite,gemini-3.8-flash"
+# Tried in order: when one is overloaded, slow or out of its daily quota, the next answers.
+# On 22 Oct 2026 the free Gemini tier allowed 20 questions a day per model, each model counted
+# apart. Models starting with @cf/ run on Workers AI and share one free daily allowance; there
+# Gemma 4, Llama 4 Scout and Mistral Small answered text and photos in 1-7 s. Gemini 3.1 Flash-Lite
+# was often overloaded and 3.8 Flash timed out, so they are last.
+MODELS = "gemini-3.6-flash,@cf/google/gemma-4-26b-a4b-it,gemini-3.5-flash-lite,@cf/meta/llama-4-scout-17b-16e-instruct,@cf/mistralai/mistral-small-3.1-24b-instruct,gemini-3.1-flash-lite,gemini-3.8-flash"
 ALLOWED_ORIGINS = "https://feadal.github.io"
 
 # Per address: 5 questions a minute.
@@ -33,6 +36,10 @@ namespace_id = "1003"
   [ratelimits.simple]
   limit = 10
   period = 60
+
+# Cloudflare's own models (the @cf/ names in MODELS): no key, a free daily allowance.
+[ai]
+binding = "AI"
 
 # Install counts for /stats. Create once with: npx wrangler d1 create forge-stats
 # then: npx wrangler d1 execute forge-stats --remote --file schema.sql

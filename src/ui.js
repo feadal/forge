@@ -1402,7 +1402,7 @@ function renderSettings(root){
       function(v){ S.theme=v; applyTheme(); save(); render(); })));
   if(ASK_URL) root.appendChild(h("section",{class:"group"},
     segField("Помощник", [["on","Вкл"],["off","Выкл"]], S.ask==="off" ? "off" : "on", function(v){ S.ask=v; save(); render(); }),
-    h("p",{class:"fine"}, "Вопросы и фото отправляются в Google Gemini.")));
+    h("p",{class:"fine"}, "Вопросы и фото отправляются в Google Gemini или Cloudflare Workers AI.")));
   var nEx=Object.keys(S.restEx).length;
   root.appendChild(h("section",{class:"group"},
     h("h2",{class:"section-title"},"Отдых"),
@@ -1413,7 +1413,7 @@ function renderSettings(root){
     btn("btn btn-quiet is-danger", "Удалить все данные", function(){
       confirmSheet({title:"Удалить все данные?", text:"Программа, питание и история тренировок сотрутся с этого телефона.", ok:"Удалить", danger:true, onOk:function(){
         try{ localStorage.removeItem(KEY); localStorage.removeItem(KEY+"_broken"); }catch(e){}
-        S=fresh(); mem=null; dropAwake(); applyTheme(); save(); go(""); render();
+        setIdCookie(null); S=fresh(); mem=null; dropAwake(); applyTheme(); save(); go(""); render();
       }});
     })));
   root.appendChild(h("p",{class:"fine about"}, "Данные хранятся только на этом телефоне."+(PING_URL ? " Чтобы считать пользователей, раз в день уходит анонимный номер установки." : "")));
@@ -1429,13 +1429,26 @@ function newId(){
   var a=new Uint8Array(16); window.crypto.getRandomValues(a);
   return Array.prototype.map.call(a, function(b){ return (b+256).toString(16).slice(1); }).join("");
 }
+// The number also lives in a cookie. On iPhone «На экран Домой» copies cookies but not localStorage
+// (iOS 17.2+), so the Home Screen app takes Safari's number and counts as the same install.
+var ID_COOKIE="forge_uid", idSynced=false;
+function setIdCookie(id){
+  try{ document.cookie=ID_COOKIE+"="+(id||"")+"; Path="+location.pathname.replace(/[^\/]*$/, "")+"; Max-Age="+(id ? 31536000 : 0)+
+    "; SameSite=Lax"+(location.protocol==="https:" ? "; Secure" : ""); }catch(e){}
+}
+function cookieId(){
+  var m=(document.cookie||"").match(/(?:^|;\s*)forge_uid=([0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12})(?:;|$)/i);
+  return m ? m[1] : null;
+}
 // Pings again the day the program is built, so «собрали программу» counts it.
 function ping(){
+  if(!PING_URL || !storageOk) return;
+  if(!idSynced){ idSynced=true; if(!S.uid && (S.uid=cookieId())) save(); if(S.uid) setIdCookie(S.uid); }
   // After a failure wait 10 minutes, so a struggling server is not hit on every tap.
-  if(!PING_URL || !storageOk || pinging || navigator.onLine===false || Date.now()<pingAfter) return;
+  if(pinging || navigator.onLine===false || Date.now()<pingAfter) return;
   var mark=mskDay()+(S.program ? "+" : "");
   if(S.seen===mark) return;
-  if(!S.uid){ S.uid=newId(); save(); }
+  if(!S.uid){ S.uid=newId(); save(); setIdCookie(S.uid); }
   pinging=true;
   fetch(PING_URL, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({id:S.uid, ready:!!S.program}), keepalive:true})
     .then(function(r){ pinging=false; if(r.ok){ S.seen=mark; save(); } else pingAfter=Date.now()+600e3; },
@@ -1449,6 +1462,7 @@ window.addEventListener("online", function(){ pingAfter=0; ping(); });
 var chat=[], askDraft="", askImg=null, askBusy=false, askErr=null, askCtx=null, askGen=0;
 var ASK_ERR={offline:"Нет интернета.", net:"Сервер не ответил. Попробуй ещё раз.", timeout:"Сервер не ответил. Попробуй ещё раз.",
   rate:"Слишком много вопросов подряд. Подожди минуту.", busy:"Помощник занят. Попробуй через минуту.",
+  limit:"Вопросы на сегодня закончились. Попробуй позже.",
   blocked:"На это ответить не могу.", size:"Фото слишком большое.", fail:"Не получилось. Попробуй ещё раз."};
 // A new chat drops the conversation and any answer still on its way; the typed text and photo stay.
 function newChat(){ chat=[]; askErr=null; askBusy=false; askCtx=null; askGen++; }
@@ -1489,7 +1503,7 @@ function askSend(text){
   var q=(text!=null ? text : askDraft).trim(), img=askImg;
   if(askBusy || (!q && !img)) return;
   if(!S.askOk){
-    confirmSheet({title:"Отправить вопрос?", text:"Вопрос и фото уйдут в Google Gemini, чтобы получить ответ. Программа и история остаются на телефоне.",
+    confirmSheet({title:"Отправить вопрос?", text:"Вопрос и фото уйдут в Google Gemini или Cloudflare Workers AI, чтобы получить ответ. Программа и история остаются на телефоне.",
       ok:"Отправить", onOk:function(){ S.askOk=true; save(); askSend(text); }});
     return;
   }

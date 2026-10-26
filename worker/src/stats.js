@@ -95,14 +95,14 @@ export function statsPage(s) {
 
 <section class="rows">
   <dl>
-    <div class="row"><dt>Установок всего</dt><dd>${num(s.total)}</dd></div>
-    <div class="row"><dt>Из них собрали программу</dt><dd>${num(s.ready)}</dd></div>
+    <div class="row"><dt>Пользователей всего</dt><dd>${num(s.users)}</dd></div>
     <div class="row"><dt>Новых за 7 дней</dt><dd>${num(s.new7)}</dd></div>
+    <div class="row"><dt>Открывали приложение</dt><dd>${num(s.opened)}</dd></div>
     <div class="row"><dt>Вопросов помощнику за 30 дней</dt><dd>${num(asks30)}</dd></div>
   </dl>
 </section>
 
-<p class="fine">Каждый телефон или браузер считается отдельным пользователем. Учитываются только запуски с интернетом.</p>
+<p class="fine">Пользователь — установка, где собрана программа. Safari и ярлык на экране «Домой» одного iPhone считаются одним, разные браузеры — отдельно. Учитываются только запуски с интернетом.</p>
 </main>
 </body>
 </html>`;
