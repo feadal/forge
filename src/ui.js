@@ -1459,7 +1459,7 @@ window.addEventListener("online", function(){ pingAfter=0; ping(); });
 
 /* ---------- ask: questions and food photos go to the proxy in worker/, nothing else leaves the phone ---------- */
 
-var chat=[], askDraft="", askImg=null, askBusy=false, askErr=null, askCtx=null, askGen=0;
+var chat=[], askDraft="", askImg=null, askBusy=false, askErr=null, askCtx=null, askGen=0, ASK_TERMS=2;
 var ASK_ERR={offline:"Нет интернета.", net:"Сервер не ответил. Попробуй ещё раз.", timeout:"Сервер не ответил. Попробуй ещё раз.",
   rate:"Слишком много вопросов подряд. Подожди минуту.", busy:"Помощник занят. Попробуй через минуту.",
   limit:"Вопросы на сегодня закончились. Попробуй позже.",
@@ -1502,9 +1502,10 @@ function pickPhoto(){
 function askSend(text){
   var q=(text!=null ? text : askDraft).trim(), img=askImg;
   if(askBusy || (!q && !img)) return;
-  if(!S.askOk){
+  // The consent names where questions go; when that list changes, ASK_TERMS goes up and it is asked again.
+  if(S.askOk!==ASK_TERMS){
     confirmSheet({title:"Отправить вопрос?", text:"Вопрос и фото уйдут в Google Gemini или Cloudflare Workers AI, чтобы получить ответ. Программа и история остаются на телефоне.",
-      ok:"Отправить", onOk:function(){ S.askOk=true; save(); askSend(text); }});
+      ok:"Отправить", onOk:function(){ S.askOk=ASK_TERMS; save(); askSend(text); }});
     return;
   }
   var hist=chat.slice(-6).map(function(m){ return {r:m.r, t:m.r==="u" && m.img ? (m.t||"Фото блюда")+" [фото]" : m.t}; });

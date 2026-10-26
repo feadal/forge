@@ -47,7 +47,7 @@ The app has no accounts. Your profile, program and workout history stay on your 
 
 Two things leave the phone, both through a small proxy (`worker/`):
 
-- On the Ask screen, your question and the photo if you attach one go to Google Gemini, or to Cloudflare Workers AI when Gemini is busy or out of its free daily quota. Also sent: your goal, the exercise you asked about, and the last few messages of the current chat, so follow-up questions make sense. The app asks before the first question, and you can turn the assistant off in Settings.
+- On the Ask screen, your question and the photo if you attach one go to Google Gemini, or to Cloudflare Workers AI when Gemini does not answer. Also sent: your goal, the exercise you asked about, and the last few messages of the current chat, so follow-up questions make sense. The app asks before the first question, and you can turn the assistant off in Settings.
 - Once a day, when online, the app sends a random install number and whether a program has been built, so the owner can count how many people use it. On the day you build a program it sends once more. The proxy keeps the number, the days the app was opened, and that one flag. Nothing else goes with it: no weight, workouts, questions or device details. The number is made on the phone and is replaced when you delete all data. The phone also keeps it in a cookie: when you add the app to the Home Screen, iPhone copies cookies but no other data, so Safari and the Home Screen app count as one install. Like any cookie of the site, it goes to GitHub Pages with requests for the app's files.
 
 ## Evidence behind the rules

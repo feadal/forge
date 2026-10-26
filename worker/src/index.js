@@ -208,7 +208,9 @@ async function ping(req, env, reply) {
   const id = b.id.toLowerCase().replace(/-/g, ""), day = mskDay(), ready = b.ready === true ? 1 : 0;
   try {
     await env.DB.batch([
-      env.DB.prepare("INSERT INTO installs (id, first_day, last_day, ready) VALUES (?1, ?2, ?2, ?3) ON CONFLICT(id) DO UPDATE SET last_day = ?2, ready = MAX(ready, ?3)").bind(id, day, ready),
+      // ready_day keeps the first day a program was seen, so a user counts from that day on.
+      env.DB.prepare("INSERT INTO installs (id, first_day, last_day, ready, ready_day) VALUES (?1, ?2, ?2, ?3, CASE WHEN ?3 = 1 THEN ?2 END) " +
+        "ON CONFLICT(id) DO UPDATE SET last_day = ?2, ready = MAX(ready, ?3), ready_day = COALESCE(ready_day, CASE WHEN ?3 = 1 THEN ?2 END)").bind(id, day, ready),
       env.DB.prepare("INSERT OR IGNORE INTO days (day, id) VALUES (?1, ?2)").bind(day, id),
     ]);
   } catch (e) {
@@ -245,14 +247,15 @@ async function stats(req, env) {
   const m = (req.headers.get("Cookie") || "").match(new RegExp("(?:^|;\\s*)" + COOKIE + "=([A-Za-z0-9_-]+)"));
   if (!m || !same(m[1], token)) return page(loginPage());
 
-  // A user is an install that built a program: the random id counts one phone or browser, and
-  // visits that stop at the questionnaire (a shared link, a preview, a look around) stay out.
+  // A user is an install that built a program, counted from the day it did: the random id counts
+  // one phone or browser, and visits that stop at the questionnaire (a shared link, a preview, a
+  // look around) stay out.
   const now = Date.now(), d = (n) => mskDay(now, n);
   const one = (sql, ...a) => env.DB.prepare(sql).bind(...a).first();
-  const live = "FROM days d JOIN installs i ON i.id = d.id WHERE i.ready = 1 AND d.day";
+  const live = "FROM days d JOIN installs i ON i.id = d.id WHERE d.day >= i.ready_day AND d.day";
   let rows;
   try { rows = await Promise.all([
-    one("SELECT COUNT(*) AS opened, COALESCE(SUM(ready), 0) AS users, COALESCE(SUM(ready AND first_day >= ?1), 0) AS new7 FROM installs", d(6)),
+    one("SELECT COUNT(*) AS opened, COUNT(ready_day) AS users, COALESCE(SUM(ready_day >= ?1), 0) AS new7 FROM installs", d(6)),
     one("SELECT COUNT(*) AS n " + live + " = ?1", d(0)),
     one("SELECT COUNT(DISTINCT d.id) AS n " + live + " >= ?1", d(6)),
     one("SELECT COUNT(DISTINCT d.id) AS n " + live + " >= ?1", d(29)),
@@ -317,10 +320,12 @@ export function clean(b) {
 export function plain(s) {
   return String(s || "")
     .replace(/\r/g, "")
-    .replace(/^#{1,6}\s+/gm, "")
+    .replace(/^#{1,6}[ \t]+/gm, "")
     .replace(/\*\*(.+?)\*\*/g, "$1")
     .replace(/__(.+?)__/g, "$1")
-    .replace(/^\s*[*-]\s+/gm, "• ")
+    .replace(/^[ \t]*[*-][ \t]+/gm, "• ")
+    // Single *emphasis* goes after the bullets, so a «* пункт» line is not taken for it; 2*3*4 stays.
+    .replace(/(^|[^\w*])\*(?=\S)([^*\n]*?\S)\*(?![\w*])/g, "$1$2")
     .replace(/`([^`]+)`/g, "$1")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
